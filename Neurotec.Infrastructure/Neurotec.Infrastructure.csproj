@@ -1,0 +1,52 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\Neurotec.Domain\Neurotec.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Neurotec">
+      <HintPath>..\libs\Neurotec\Neurotec.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Neurotec.Biometrics">
+      <HintPath>..\libs\Neurotec\Neurotec.Biometrics.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Neurotec.Biometrics.Client">
+      <HintPath>..\libs\Neurotec\Neurotec.Biometrics.Client.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Neurotec.Devices">
+      <HintPath>..\libs\Neurotec\Neurotec.Devices.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Neurotec.Licensing">
+      <HintPath>..\libs\Neurotec\Neurotec.Licensing.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Neurotec.Media">
+      <HintPath>..\libs\Neurotec\Neurotec.Media.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\libs\Neurotec\**\*">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>%(RecursiveDir)%(FileName)%(Extension)</Link>
+    </None>
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.Drawing.Common" Version="10.0.7" />
+    <PackageReference Include="Microsoft.Extensions.Options" Version="10.0.0" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+</Project>

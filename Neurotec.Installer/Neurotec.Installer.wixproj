@@ -1,0 +1,13 @@
+<Project Sdk="WixToolset.Sdk/5.0.0">
+  <PropertyGroup>
+    <OutputName>Neurotec.Biometric.Installer</OutputName>
+    <InstallerPlatform>x64</InstallerPlatform>
+    <SuppressIces>ICE03</SuppressIces>
+  </PropertyGroup>
+  <PropertyGroup>
+    <DefineConstants>PublishPath=C:\Users\user\Desktop\Zeeshan\Vibe Coding\POC\Neurotec\src\Neurotec.API\publish_final</DefineConstants>
+  </PropertyGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\Neurotec.API\Neurotec.API.csproj" />
+  </ItemGroup>
+</Project>

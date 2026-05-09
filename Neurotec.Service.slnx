@@ -1,0 +1,7 @@
+<Solution>
+  <Project Path="Neurotec.API/Neurotec.API.csproj" />
+  <Project Path="Neurotec.Application/Neurotec.Application.csproj" />
+  <Project Path="Neurotec.Domain/Neurotec.Domain.csproj" />
+  <Project Path="Neurotec.Infrastructure/Neurotec.Infrastructure.csproj" />
+  <Project Path="Neurotec.Installer/Neurotec.Installer.wixproj" Type="b7dd6f7e-def8-4e67-b5b7-07ef123db6f0" />
+</Solution>

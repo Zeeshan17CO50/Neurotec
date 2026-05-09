@@ -1,0 +1,401 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VFS Global | Professional Biometric System</title>
+    <style>
+        :root {
+            --bg-color: #0d0d0f;
+            --card-bg: rgba(25, 25, 28, 0.8);
+            --border-color: rgba(255, 255, 255, 0.1);
+            --accent-primary: #3b82f6;
+            --accent-glow: rgba(59, 130, 246, 0.5);
+            --text-main: #e2e8f0;
+            --text-dim: #94a3b8;
+            --status-green: #10b981;
+            --status-red: #ef4444;
+            --status-yellow: #f59e0b;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            background-image:
+                radial-gradient(circle at 50% -20%, #1e293b 0%, transparent 50%),
+                radial-gradient(circle at 0% 100%, #0f172a 0%, transparent 30%);
+            color: var(--text-main);
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+
+        .dashboard {
+            width: 500px;
+            background: var(--card-bg);
+            backdrop-filter: blur(12px);
+            border: 1px solid var(--border-color);
+            border-radius: 16px;
+            padding: 2.5rem;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .header h1 {
+            font-size: 1.25rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--accent-primary);
+            margin-bottom: 0.5rem;
+        }
+
+        .header p {
+            font-size: 0.8rem;
+            color: var(--text-dim);
+        }
+
+        .status-bar {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0, 0, 0, 0.3);
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .status-indicator {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            font-size: 0.85rem;
+            font-weight: 600;
+        }
+
+        .pulse-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background-color: var(--status-red);
+            box-shadow: 0 0 10px var(--status-red);
+        }
+
+        .pulse-dot.active {
+            background-color: var(--status-green);
+            box-shadow: 0 0 10px var(--status-green);
+            animation: pulse 2s infinite;
+        }
+
+        .pulse-dot.busy {
+            background-color: var(--status-yellow);
+            box-shadow: 0 0 10px var(--status-yellow);
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+                transform: scale(1);
+            }
+
+            50% {
+                opacity: 0.5;
+                transform: scale(1.2);
+            }
+
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+
+        .preview-area {
+            aspect-ratio: 4/3;
+            background: #000;
+            border-radius: 8px;
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            overflow: hidden;
+            position: relative;
+        }
+
+        #preview-img {
+            max-width: 100%;
+            max-height: 100%;
+            display: none;
+        }
+
+        .placeholder-text {
+            color: var(--text-dim);
+            font-size: 0.8rem;
+            text-align: center;
+            padding: 2rem;
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .device-select {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 0.75rem;
+            border-radius: 8px;
+            font-size: 0.85rem;
+            outline: none;
+            transition: border-color 0.3s;
+            appearance: none;
+            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+            background-repeat: no-repeat;
+            background-position: right 1rem center;
+            background-size: 1em;
+            cursor: pointer;
+        }
+
+        .device-select:focus {
+            border-color: var(--accent-primary);
+        }
+
+        .btn {
+            background: var(--accent-primary);
+            color: white;
+            border: none;
+            padding: 1rem;
+            border-radius: 8px;
+            font-weight: 700;
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            box-shadow: 0 4px 15px var(--accent-glow);
+        }
+
+        .btn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 25px var(--accent-glow);
+            background: #4f46e5;
+        }
+
+        .btn:active:not(:disabled) {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            filter: grayscale(1);
+        }
+
+        .quality-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            display: none;
+            border: 1px solid var(--accent-primary);
+        }
+
+        .loading-overlay {
+            position: absolute;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.6);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 1rem;
+        }
+
+        .spinner {
+            width: 30px;
+            height: 30px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: var(--accent-primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        .footer {
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.7rem;
+            color: var(--text-dim);
+            opacity: 0.6;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="dashboard">
+        <div class="header">
+            <h1>Neurotec Professional</h1>
+            <p>VFS Global Biometric Solution</p>
+        </div>
+
+        <div class="status-bar">
+            <div class="status-indicator">
+                <div id="status-dot" class="pulse-dot"></div>
+                <span id="status-text">INITIALIZING...</span>
+            </div>
+            <div id="clock" style="font-size: 0.75rem; color: var(--text-dim);">00:00:00</div>
+        </div>
+
+        <div class="status-bar" style="margin-top: -1rem; background: transparent; border: none; padding-top: 0;">
+            <div class="diag-container"
+                style="display: flex; gap: 1rem; font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em;">
+                <span>SDK: <span id="diag-sdk" style="color: var(--accent-primary);">--</span></span>
+                <span>HW: <span id="diag-hw" style="color: var(--status-green);">--</span></span>
+            </div>
+        </div>
+
+        <div class="preview-area">
+            <img id="preview-img" src="" alt="Biometric Preview">
+            <div id="placeholder" class="placeholder-text">
+                Ready for acquisition.<br>Click start to begin scan.
+            </div>
+            <div id="quality" class="quality-badge">SCORE: 0</div>
+            <div id="loading" class="loading-overlay">
+                <div class="spinner"></div>
+                <span style="font-size: 0.7rem; letter-spacing: 0.1em;">ACQUIRING...</span>
+            </div>
+        </div>
+
+        <div class="controls">
+            <select id="device-list" class="device-select">
+                <option value="">SCANNING FOR HARDWARE...</option>
+            </select>
+            <button class="btn" id="capture-btn" disabled>Start Capture</button>
+        </div>
+
+        <div class="footer">
+            Windows Service ID: NEURO-01 | localhost:3000
+        </div>
+    </div>
+
+    <script>
+        const elements = {
+            dot: document.getElementById('status-dot'),
+            text: document.getElementById('status-text'),
+            btn: document.getElementById('capture-btn'),
+            img: document.getElementById('preview-img'),
+            placeholder: document.getElementById('placeholder'),
+            quality: document.getElementById('quality'),
+            loading: document.getElementById('loading'),
+            clock: document.getElementById('clock'),
+            deviceList: document.getElementById('device-list')
+        };
+
+        async function loadDevices() {
+            try {
+                const res = await fetch('/api/devices');
+                const data = await res.json();
+
+                elements.deviceList.innerHTML = '';
+                if (data.devices && data.devices.length > 0) {
+                    data.devices.forEach(device => {
+                        const opt = document.createElement('option');
+                        opt.value = device;
+                        opt.innerText = device;
+                        elements.deviceList.appendChild(opt);
+                    });
+                } else {
+                    const opt = document.createElement('option');
+                    opt.value = "";
+                    opt.innerText = "NO DEVICES DETECTED";
+                    elements.deviceList.appendChild(opt);
+                }
+            } catch (e) {
+                console.error("Failed to load devices", e);
+            }
+        }
+
+        async function updateStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+
+                elements.text.innerText = data.status.toUpperCase();
+                elements.dot.className = 'pulse-dot ' + (data.isReady ? 'active' : 'busy');
+                elements.btn.disabled = !data.isReady;
+
+                document.getElementById('diag-sdk').innerText = data.sdkVersion;
+                document.getElementById('diag-hw').innerText = data.hardwareDetected ? 'CONNECTED' : 'DISCONNECTED';
+
+            } catch (e) {
+                elements.text.innerText = 'DISCONNECTED';
+                elements.dot.className = 'pulse-dot';
+                elements.btn.disabled = true;
+            }
+        }
+
+        async function startCapture() {
+            elements.loading.style.display = 'flex';
+            elements.btn.disabled = true;
+
+            try {
+                const res = await fetch('/api/capture', { method: 'POST' });
+                const data = await res.json();
+
+                if (data.success) {
+                    elements.img.src = 'data:image/png;base64,' + data.image;
+                    elements.img.style.display = 'block';
+                    elements.placeholder.style.display = 'none';
+                    elements.quality.innerText = 'SCORE: ' + data.quality;
+                    elements.quality.style.display = 'block';
+                } else {
+                    alert('Capture Failed: ' + data.error);
+                }
+            } catch (e) {
+                alert('Connection Error');
+            } finally {
+                elements.loading.style.display = 'none';
+                updateStatus();
+            }
+        }
+
+        elements.btn.addEventListener('click', startCapture);
+
+        // Clock Update
+        setInterval(() => {
+            elements.clock.innerText = new Date().toLocaleTimeString();
+        }, 1000);
+
+        // Polling
+        setInterval(updateStatus, 2000);
+        setInterval(loadDevices, 5000); // Check for hardware changes every 5s
+        updateStatus();
+        loadDevices();
+    </script>
+</body>
+
+</html>
