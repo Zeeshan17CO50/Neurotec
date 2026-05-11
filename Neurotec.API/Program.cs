@@ -7,7 +7,7 @@ using Neurotec.Infrastructure.Biometrics;
 
 [assembly: SupportedOSPlatform("windows")]
 
-// Fix: Ensure the service uses its installation directory for path resolution
+// Ensure the service uses its installation directory for path resolution
 Directory.SetCurrentDirectory(AppContext.BaseDirectory);
 
 var builder = WebApplication.CreateBuilder(new WebApplicationOptions

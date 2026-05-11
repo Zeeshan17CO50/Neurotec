@@ -69,10 +69,12 @@ public class NeurotecScanner : IBiometricScanner, IDisposable
             // Log exactly what's happening with plugins
             foreach (var plugin in NDeviceManager.PluginManager.Plugins)
             {
-                if (plugin.FileName.Contains("Mantra") || plugin.FileName.Contains("Tatvik"))
-                {
-                    Console.WriteLine($"[Neurotec SDK]: Plugin: {plugin.FileName} | State: {plugin.State}");
-                }
+                //if (plugin.FileName.Contains("Mantra") || plugin.FileName.Contains("Tatvik") || 
+                //    plugin.FileName.Contains("CrossMatchLScan") || plugin.FileName.Contains("CrossMatchLScan"))
+                //{
+                    string errorInfo = plugin.Error != null ? $" | Error: {plugin.Error.Message}" : "";
+                    Console.WriteLine($"[Neurotec SDK]: Plugin: {plugin.FileName} | State: {plugin.State}{errorInfo}");
+                //}
             }
             
             // Pre-configure Device Manager - Wrap in try to avoid "Already Initialized" crash
@@ -93,17 +95,22 @@ public class NeurotecScanner : IBiometricScanner, IDisposable
     public List<string> GetDevices()
     {
         var devices = new List<string>();
+        var tempdevices = _biometricClient.DeviceManager.Devices;
         try
         {
             // Log exact plugin status on every API call for diagnostics
             foreach (var plugin in NDeviceManager.PluginManager.Plugins)
             {
-                if (plugin.FileName.Contains("Mantra") || plugin.FileName.Contains("Tatvik"))
-                {
+                //if (plugin.FileName.Contains("Mantra") || plugin.FileName.Contains("Tatvik") || 
+                //    plugin.FileName.Contains("CrossMatch") || plugin.FileName.Contains("CrossMatchLScan"))
+                //{
                     // Only log if not plugged (to reduce noise) or for initial check
-                    if (plugin.State != NPluginState.Plugged)
-                        Console.WriteLine($"[Neurotec SDK]: Plugin FOUND: {plugin.FileName} | State: {plugin.State}");
-                }
+                    //if (plugin.State != NPluginState.Plugged)
+                    //{
+                        string errorInfo = plugin.Error != null ? $" | Error: {plugin.Error.Message}" : "";
+                        Console.WriteLine($"[Neurotec SDK]: Plugin FOUND: {plugin.FileName} | State: {plugin.State}{errorInfo}");
+                    //}
+                //}
             }
 
             _biometricClient.BiometricTypes = NBiometricType.Finger;
@@ -124,8 +131,15 @@ public class NeurotecScanner : IBiometricScanner, IDisposable
                 // Log detailed classification for diagnostics
                 Console.WriteLine($"[Neurotec SDK]: DEVICE DETECTED -> {device.DisplayName} | Make: {device.Make} | Type: {device.DeviceType}");
                 
-                // Only add to the UI list if it's a finger scanner or the specific Mantra model
-                if (device.DeviceType == NDeviceType.FingerScanner || device.DisplayName.Contains("Mantra"))
+                // Add to list if it's a finger scanner, or explicitly contains key brands
+                // Fix: Include "Cross Match" with space to match actual hardware string
+                bool isCompatible = device.DeviceType == NDeviceType.FingerScanner || 
+                                   device.DisplayName.Contains("Mantra") || 
+                                   device.DisplayName.Contains("CrossMatch") || 
+                                   device.DisplayName.Contains("CrossMatchLScan") || 
+                                   device.DisplayName.Contains("Patrol");
+
+                if (isCompatible)
                 {
                     devices.Add($"{device.DisplayName} ({device.Make})");
                 }
