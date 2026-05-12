@@ -10,7 +10,7 @@ The system replaces a decade-old solution with improved performance, easier depl
 
 ## Key Features
 
-✅ **Single-Click Installation** - One installer (`BiometricSetup.exe`) deploys everything  
+✅ **Single-Click Installation** - One installer (`Neurotec_Biometric_v1.0.msi`) deploys everything  
 ✅ **Automatic Windows Service** - Auto-starts on boot with no manual configuration  
 ✅ **Neurotec SDK Integration** - Automatic SDK initialization and USB device detection  
 ✅ **Web-Based UI** - Modern web interface served directly from the Windows Service  
