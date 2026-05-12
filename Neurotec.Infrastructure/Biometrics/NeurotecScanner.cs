@@ -37,8 +37,8 @@ public class NeurotecScanner : IBiometricScanner, IDisposable
 
         try 
         { 
-            NDeviceManager.PluginManager.PluginSearchPath = appRoot; 
-            NDeviceManager.PluginManager.Refresh();
+            //NDeviceManager.PluginManager.PluginSearchPath = appRoot; 
+            //NDeviceManager.PluginManager.Refresh();
             Console.WriteLine($"[Neurotec SDK]: Plugin Search Path configured at: {appRoot}");
         } 
         catch (Exception ex) { Console.WriteLine($"[Neurotec SDK]: Plugin Path Error: {ex.Message}"); }
@@ -93,108 +93,192 @@ public class NeurotecScanner : IBiometricScanner, IDisposable
     public List<string> GetDevices()
     {
         var devices = new List<string>();
+
         try
         {
-            // Log exact plugin status on every API call for diagnostics
+            Console.WriteLine("========== DEVICE SCAN ==========");
+
+            // IMPORTANT
+            _biometricClient.Initialize();
+
+            // IMPORTANT
+            _biometricClient.DeviceManager.Initialize();
+
+            _biometricClient.DeviceManager.DeviceTypes =
+                NDeviceType.FingerScanner;
+
+            Console.WriteLine("========== PLUGINS ==========");
+
             foreach (var plugin in NDeviceManager.PluginManager.Plugins)
             {
-                if (plugin.FileName.Contains("Mantra") || plugin.FileName.Contains("Tatvik"))
+                if (plugin.FileName.Contains("CrossMatch"))
                 {
-                    // Only log if not plugged (to reduce noise) or for initial check
-                    if (plugin.State != NPluginState.Plugged)
-                        Console.WriteLine($"[Neurotec SDK]: Plugin FOUND: {plugin.FileName} | State: {plugin.State}");
+                    Console.WriteLine($"Plugin : {plugin.FileName}");
+                    Console.WriteLine($"State  : {plugin.State}");
+
+                    if (plugin.Error != null)
+                    {
+                        Console.WriteLine($"Error  : {plugin.Error.Message}");
+                    }
                 }
             }
 
-            _biometricClient.BiometricTypes = NBiometricType.Finger;
-            
-            // Perform a "Deep Scan" by temporarily allowing all device types
-            var originalTypes = _biometricClient.DeviceManager.DeviceTypes;
-            _biometricClient.DeviceManager.DeviceTypes = NDeviceType.Any;
-            
-            var deviceList = _biometricClient.DeviceManager.Devices;
-            
-            if (deviceList.Count > 0)
+            Console.WriteLine("========== DEVICES ==========");
+
+            foreach (NDevice device in _biometricClient.DeviceManager.Devices)
             {
-                Console.WriteLine($"[Neurotec SDK]: Hardware scan finished. Raw Count: {deviceList.Count}");
-            }
-            
-            foreach (NDevice device in deviceList)
-            {
-                // Log detailed classification for diagnostics
-                Console.WriteLine($"[Neurotec SDK]: DEVICE DETECTED -> {device.DisplayName} | Make: {device.Make} | Type: {device.DeviceType}");
-                
-                // Only add to the UI list if it's a finger scanner or the specific Mantra model
-                if (device.DeviceType == NDeviceType.FingerScanner || device.DisplayName.Contains("Mantra"))
-                {
-                    devices.Add($"{device.DisplayName} ({device.Make})");
-                }
+                Console.WriteLine($"Name : {device.DisplayName}");
+                Console.WriteLine($"Type : {device.DeviceType}");
+                Console.WriteLine($"Make : {device.Make}");
+
+                devices.Add(device.DisplayName);
             }
 
-            // Restore original filtering
-            _biometricClient.DeviceManager.DeviceTypes = originalTypes;
+            Console.WriteLine($"TOTAL DEVICES : {devices.Count}");
         }
         catch (Exception ex)
         {
-            if (!ex.Message.Contains("already initialized"))
-                Console.WriteLine($"[Neurotec SDK Error]: {ex.Message}");
+            Console.WriteLine("DEVICE ERROR:");
+            Console.WriteLine(ex.ToString());
         }
 
-        return devices.Count > 0 ? devices : new List<string> { "No Neurotec-compatible scanners detected" };
+        return devices.Count > 0
+            ? devices
+            : new List<string> { "No scanners detected" };
     }
+
+    // public async Task<BiometricResult> CaptureAsync(CancellationToken ct = default)
+    // {
+    //     if (_status == ScannerStatus.Error)
+    //     {
+    //         return BiometricResult.Fail("SDK not initialized or license missing.");
+    //     }
+
+    //     UpdateStatus(ScannerStatus.Capturing);
+
+    //     using var subject = new NSubject();
+    //     using var finger = new NFinger();
+    //     subject.Fingers.Add(finger);
+
+    //     try
+    //     {
+    //         // Configure capture settings from appsettings
+    //         _biometricClient.FingersReturnBinarizedImage = true;
+    //         _biometricClient.FingersQualityThreshold = (byte)_settings.NeurotecSdk.CaptureSettings.QualityThreshold;
+
+    //         // Start capture
+    //         var status = await Task.Run(() => _biometricClient.CreateTemplate(subject), ct);
+
+    //         if (status == NBiometricStatus.Ok)
+    //         {
+    //             // Extract the image (Neurotec NImage to Base64)
+    //             using var nImage = finger.Image;
+    //             if (nImage != null)
+    //             {
+    //                 using var bitmap = nImage.ToBitmap();
+    //                 string base64 = BitmapToBase64(bitmap);
+
+    //                 return BiometricResult.Ok(new BiometricData
+    //                 {
+    //                     Base64Image = base64,
+    //                     QualityScore = finger.Objects[0].Quality,
+    //                     CapturedAt = DateTime.UtcNow
+    //                 });
+    //             }
+    //         }
+
+    //         return BiometricResult.Fail($"Capture failed with status: {status}");
+    //     }
+    //     catch (OperationCanceledException)
+    //     {
+    //         return BiometricResult.Fail("Capture cancelled by user.");
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         return BiometricResult.Fail($"Neurotec SDK Error: {ex.Message}");
+    //     }
+    //     finally
+    //     {
+    //         UpdateStatus(ScannerStatus.Ready);
+    //     }
+    // }
 
     public async Task<BiometricResult> CaptureAsync(CancellationToken ct = default)
     {
         if (_status == ScannerStatus.Error)
-        {
-            return BiometricResult.Fail("SDK not initialized or license missing.");
-        }
+            return BiometricResult.Fail("SDK not initialized.");
 
         UpdateStatus(ScannerStatus.Capturing);
-        
+
         using var subject = new NSubject();
-        using var finger = new NFinger();
+
+        using var finger = new NFinger
+        {
+            Position = NFPosition.RightIndex,
+            ImpressionType = NFImpressionType.LiveScanPlain
+        };
+
         subject.Fingers.Add(finger);
 
         try
         {
-            // Configure capture settings from appsettings
-            _biometricClient.FingersReturnBinarizedImage = true;
-            _biometricClient.FingersQualityThreshold = (byte)_settings.NeurotecSdk.CaptureSettings.QualityThreshold;
+            Console.WriteLine("[DEBUG] Starting Capture");
 
-            // Start capture
-            var status = await Task.Run(() => _biometricClient.CreateTemplate(subject), ct);
+            var scanner = _biometricClient.DeviceManager.Devices
+                .OfType<NFingerScanner>()
+                .FirstOrDefault();
+
+            if (scanner == null)
+            {
+                return BiometricResult.Fail("Scanner not found.");
+            }
+
+            _biometricClient.FingerScanner = scanner;
+
+            Console.WriteLine($"[DEBUG] Scanner Attached: {scanner.DisplayName}");
+
+            _biometricClient.Timeout = TimeSpan.FromSeconds(10);
+
+            _biometricClient.FingersQualityThreshold = 30;
+
+            _biometricClient.FingersReturnBinarizedImage = true;
+
+            Console.WriteLine("[DEBUG] Waiting for finger...");
+
+            var status = await Task.Run(() =>
+                _biometricClient.CreateTemplate(subject));
+
+            Console.WriteLine($"[DEBUG] Capture Status: {status}");
 
             if (status == NBiometricStatus.Ok)
             {
-                // Extract the image (Neurotec NImage to Base64)
-                using var nImage = finger.Image;
-                if (nImage != null)
+                using var image = finger.Image;
+
+                if (image != null)
                 {
-                    using var bitmap = nImage.ToBitmap();
-                    string base64 = BitmapToBase64(bitmap);
+                    using var bitmap = image.ToBitmap();
 
                     return BiometricResult.Ok(new BiometricData
                     {
-                        Base64Image = base64,
+                        Base64Image = BitmapToBase64(bitmap),
                         QualityScore = finger.Objects[0].Quality,
                         CapturedAt = DateTime.UtcNow
                     });
                 }
             }
 
-            return BiometricResult.Fail($"Capture failed with status: {status}");
-        }
-        catch (OperationCanceledException)
-        {
-            return BiometricResult.Fail("Capture cancelled by user.");
+            return BiometricResult.Fail($"Capture failed: {status}");
         }
         catch (Exception ex)
         {
-            return BiometricResult.Fail($"Neurotec SDK Error: {ex.Message}");
+            Console.WriteLine($"[ERROR]: {ex}");
+
+            return BiometricResult.Fail(ex.Message);
         }
         finally
         {
+            _biometricClient.FingerScanner = null;
+
             UpdateStatus(ScannerStatus.Ready);
         }
     }
