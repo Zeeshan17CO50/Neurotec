@@ -6,10 +6,12 @@ using Neurotec.Domain.Configuration;
 using Neurotec.Domain.Entities;
 using Neurotec.Domain.Enums;
 using Neurotec.Domain.Interfaces;
+using Neurotec.Infrastructure.Biometrics.Helpers;
 using Neurotec.Licensing;
 using Neurotec.Plugins;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.Linq.Expressions;
 using System.Runtime.Versioning;
 
 namespace Neurotec.Infrastructure.Biometrics;
@@ -55,7 +57,7 @@ public class NeurotecScanner : IBiometricScanner, IDisposable
             // Set status to ready early, as we'll handle minor init errors gracefully
             _status = ScannerStatus.Ready;
 
-            string components = "Biometrics.FingerExtraction,Devices.FingerScanners,Biometrics.FingerQualityAssessment";
+            string components = "Biometrics.FingerExtraction,Biometrics.PalmExtraction,Devices.FingerScanners,Biometrics.FingerQualityAssessment";
             string server = _settings.NeurotecSdk.LicenseServer ?? "/local";
             bool obtained = NLicense.ObtainComponents(server, 5000, components);
             
@@ -147,139 +149,131 @@ public class NeurotecScanner : IBiometricScanner, IDisposable
             : new List<string> { "No scanners detected" };
     }
 
-    // public async Task<BiometricResult> CaptureAsync(CancellationToken ct = default)
-    // {
-    //     if (_status == ScannerStatus.Error)
-    //     {
-    //         return BiometricResult.Fail("SDK not initialized or license missing.");
-    //     }
-
-    //     UpdateStatus(ScannerStatus.Capturing);
-
-    //     using var subject = new NSubject();
-    //     using var finger = new NFinger();
-    //     subject.Fingers.Add(finger);
-
-    //     try
-    //     {
-    //         // Configure capture settings from appsettings
-    //         _biometricClient.FingersReturnBinarizedImage = true;
-    //         _biometricClient.FingersQualityThreshold = (byte)_settings.NeurotecSdk.CaptureSettings.QualityThreshold;
-
-    //         // Start capture
-    //         var status = await Task.Run(() => _biometricClient.CreateTemplate(subject), ct);
-
-    //         if (status == NBiometricStatus.Ok)
-    //         {
-    //             // Extract the image (Neurotec NImage to Base64)
-    //             using var nImage = finger.Image;
-    //             if (nImage != null)
-    //             {
-    //                 using var bitmap = nImage.ToBitmap();
-    //                 string base64 = BitmapToBase64(bitmap);
-
-    //                 return BiometricResult.Ok(new BiometricData
-    //                 {
-    //                     Base64Image = base64,
-    //                     QualityScore = finger.Objects[0].Quality,
-    //                     CapturedAt = DateTime.UtcNow
-    //                 });
-    //             }
-    //         }
-
-    //         return BiometricResult.Fail($"Capture failed with status: {status}");
-    //     }
-    //     catch (OperationCanceledException)
-    //     {
-    //         return BiometricResult.Fail("Capture cancelled by user.");
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         return BiometricResult.Fail($"Neurotec SDK Error: {ex.Message}");
-    //     }
-    //     finally
-    //     {
-    //         UpdateStatus(ScannerStatus.Ready);
-    //     }
-    // }
-
-    public async Task<BiometricResult> CaptureAsync(CancellationToken ct = default)
+    public async Task<BiometricResult> CaptureAsync(FingerCaptureMode mode, CancellationToken ct = default)
     {
         if (_status == ScannerStatus.Error)
-            return BiometricResult.Fail("SDK not initialized.");
+            return BiometricResult.Fail("SDK not initialized or licensing failed.");
 
         UpdateStatus(ScannerStatus.Capturing);
 
-        using var subject = new NSubject();
-
-        using var finger = new NFinger
-        {
-            Position = NFPosition.RightIndex,
-            ImpressionType = NFImpressionType.LiveScanPlain
-        };
-
-        subject.Fingers.Add(finger);
+        // 1. Initialize Multimodal Subject based on Selected Mode
+        using var subject = CreateSubjectForMode(mode);
+        
+        // 2. Setup high-precision timeout (40s for professional acquisition)
+        using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        cts.CancelAfter(TimeSpan.FromSeconds(40));
 
         try
         {
-            Console.WriteLine("[DEBUG] Starting Capture");
+            Console.WriteLine($"[DEBUG]: --- Initializing {mode} Acquisition Pipeline ---");
 
-            var scanner = _biometricClient.DeviceManager.Devices
-                .OfType<NFingerScanner>()
-                .FirstOrDefault();
+            // 3. Ensure Device Manager is refreshed
+            _biometricClient.DeviceManager.Initialize();
+            
+            // 4. Assign hardware scanners
+            ConfigureHardwareForCapture();
 
-            if (scanner == null)
-            {
-                return BiometricResult.Fail("Scanner not found.");
-            }
-
-            _biometricClient.FingerScanner = scanner;
-
-            Console.WriteLine($"[DEBUG] Scanner Attached: {scanner.DisplayName}");
-
-            _biometricClient.Timeout = TimeSpan.FromSeconds(10);
-
-            _biometricClient.FingersQualityThreshold = 30;
-
+            // 5. Configure Professional Extraction & Quality Settings
             _biometricClient.FingersReturnBinarizedImage = true;
+            _biometricClient.FingersQualityThreshold = 30;
+            _biometricClient.PalmsReturnBinarizedImage = true;
 
-            Console.WriteLine("[DEBUG] Waiting for finger...");
+            Console.WriteLine($"[DEBUG]: Calling CreateTemplate (Native Acquisition)...");
+            
+            // 6. Execute Native CreateTemplate
+            var status = await Task.Run(() => _biometricClient.CreateTemplate(subject));
 
-            var status = await Task.Run(() =>
-                _biometricClient.CreateTemplate(subject));
-
-            Console.WriteLine($"[DEBUG] Capture Status: {status}");
+            Console.WriteLine($"[DEBUG]: Acquisition Finished. Status: {status}");
 
             if (status == NBiometricStatus.Ok)
             {
-                using var image = finger.Image;
+                // Process results - Return the first high-quality image found in the subject
+                var fingerResult = subject.Fingers.FirstOrDefault(f => f.Status == NBiometricStatus.Ok);
+                var palmResult = subject.Palms.FirstOrDefault(p => p.Status == NBiometricStatus.Ok);
 
-                if (image != null)
+                var imageSource = fingerResult?.Image ?? palmResult?.Image;
+                var quality = fingerResult?.Objects.FirstOrDefault()?.Quality ?? palmResult?.Objects.FirstOrDefault()?.Quality ?? 0;
+
+                if (imageSource != null)
                 {
-                    using var bitmap = image.ToBitmap();
-
+                    using var bitmap = imageSource.ToBitmap();
                     return BiometricResult.Ok(new BiometricData
                     {
                         Base64Image = BitmapToBase64(bitmap),
-                        QualityScore = finger.Objects[0].Quality,
+                        QualityScore = quality,
                         CapturedAt = DateTime.UtcNow
                     });
                 }
             }
 
-            return BiometricResult.Fail($"Capture failed: {status}");
+            return BiometricResult.Fail($"Capture failed or timed out. Status: {status}");
+        }
+        catch (OperationCanceledException)
+        {
+            return BiometricResult.Fail("Capture Timeout: No finger/palm detected on sensor.");
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"[ERROR]: {ex}");
-
-            return BiometricResult.Fail(ex.Message);
+            Console.WriteLine($"[FATAL]: SDK Pipeline Crash: {ex}");
+            return BiometricResult.Fail($"SDK Error: {ex.Message}");
         }
         finally
         {
             _biometricClient.FingerScanner = null;
-
+            _biometricClient.PalmScanner = null;
             UpdateStatus(ScannerStatus.Ready);
+        }
+    }
+
+    private NSubject CreateSubjectForMode(FingerCaptureMode mode)
+    {
+        var subject = new NSubject();
+        
+        switch (mode)
+        {
+            case FingerCaptureMode.RightThumb:
+                subject.Fingers.Add(new NFinger { Position = NFPosition.RightThumb, ImpressionType = NFImpressionType.LiveScanPlain });
+                break;
+            case FingerCaptureMode.LeftThumb:
+                subject.Fingers.Add(new NFinger { Position = NFPosition.LeftThumb, ImpressionType = NFImpressionType.LiveScanPlain });
+                break;
+            case FingerCaptureMode.PlainLeftFourFingers:
+                AddFingersToSubject(subject, new[] { NFPosition.PlainLeftFourFingers });
+                break;
+            case FingerCaptureMode.PlainRightFourFingers:
+                AddFingersToSubject(subject, new[] { NFPosition.PlainRightFourFingers });
+                break;
+        }
+
+        // Add a default palm for demonstration if required by the workflow
+        // subject.Palms.Add(new NPalm { Position = NPalmPosition.RightFullPalm });
+
+        return subject;
+    }
+
+    private void AddFingersToSubject(NSubject subject, NFPosition[] positions)
+    {
+        foreach (var pos in positions)
+        {
+            subject.Fingers.Add(new NFinger { Position = pos, ImpressionType = NFImpressionType.LiveScanPlain });
+        }
+    }
+
+    private void ConfigureHardwareForCapture()
+    {
+        var fingerScanner = _biometricClient.DeviceManager.Devices.OfType<NFingerScanner>().FirstOrDefault();
+        var palmScanner = _biometricClient.DeviceManager.Devices.OfType<NPalmScanner>().FirstOrDefault();
+
+        if (fingerScanner != null)
+        {
+            _biometricClient.FingerScanner = fingerScanner;
+            Console.WriteLine($"[DEBUG]: Finger Scanner Attached: {fingerScanner.DisplayName}");
+        }
+
+        if (palmScanner != null)
+        {
+            _biometricClient.PalmScanner = palmScanner;
+            Console.WriteLine($"[DEBUG]: Palm Scanner Attached: {palmScanner.DisplayName}");
         }
     }
 

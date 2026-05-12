@@ -1,7 +1,7 @@
 using System.Runtime.Versioning;
 using Microsoft.Extensions.Hosting.WindowsServices;
-using Microsoft.Extensions.Options;
 using Neurotec.Domain.Configuration;
+using Neurotec.Domain.Enums;
 using Neurotec.Domain.Interfaces;
 using Neurotec.Infrastructure.Biometrics;
 
@@ -55,34 +55,36 @@ try
     }
 
     // 2. Global Exception Handler Middleware
-app.Use(async (context, next) =>
-{
-    try
+    app.Use(async (context, next) =>
     {
-        await next();
-    }
-    catch (Exception ex)
-    {
-        context.Response.StatusCode = 500;
-        context.Response.ContentType = "application/json";
-        var error = new { 
-            status = "Error", 
-            message = ex.Message, 
-            stackTrace = ex.StackTrace,
-            innerException = ex.InnerException?.Message 
-        };
-        await context.Response.WriteAsJsonAsync(error);
-    }
-});
+        try
+        {
+            await next();
+        }
+        catch (Exception ex)
+        {
+            context.Response.StatusCode = 500;
+            context.Response.ContentType = "application/json";
+            var error = new
+            {
+                status = "Error",
+                message = ex.Message,
+                stackTrace = ex.StackTrace,
+                innerException = ex.InnerException?.Message
+            };
+            await context.Response.WriteAsJsonAsync(error);
+        }
+    });
 
-app.UseDefaultFiles();
+    app.UseDefaultFiles();
     app.UseStaticFiles();
 
     // Default route: Show status if redirect fails
     app.MapGet("/", () => Results.Content("Neurotec Service is ALIVE. Dashboard is at <a href='/home'>/home</a>", "text/html"));
 
     // Scope Alignment: Map /home to index.html with explicit path checking
-    app.MapGet("/home", () => {
+    app.MapGet("/home", () =>
+    {
         var filePath = Path.Combine(app.Environment.ContentRootPath, settings.ServiceSettings.WebRoot, "index.html");
         if (!File.Exists(filePath))
         {
@@ -110,19 +112,19 @@ app.UseDefaultFiles();
         return Results.Ok(new { devices });
     });
 
-    app.MapPost("/api/capture", async (IBiometricScanner scanner, CancellationToken ct) =>
+    app.MapPost("/api/capture", async (CaptureRequest request, IBiometricScanner scanner, CancellationToken ct) =>
     {
-        var result = await scanner.CaptureAsync(ct);
-        
+        var result = await scanner.CaptureAsync(request.Mode, ct);
+
         if (!result.Success)
         {
             return Results.BadRequest(new { success = false, error = result.ErrorMessage });
         }
 
-        return Results.Ok(new 
-        { 
-            success = true, 
-            image = result.Data?.Base64Image, 
+        return Results.Ok(new
+        {
+            success = true,
+            image = result.Data?.Base64Image,
             quality = result.Data?.QualityScore,
             timestamp = result.Data?.CapturedAt
         });
@@ -141,3 +143,5 @@ catch (Exception ex)
     }
     throw;
 }
+
+public record CaptureRequest(FingerCaptureMode Mode);

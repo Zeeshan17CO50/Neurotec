@@ -291,10 +291,20 @@
         </div>
 
         <div class="controls">
+            <label style="font-size: 0.7rem; color: var(--text-dim); margin-bottom: 0.25rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Capture Mode</label>
+            <select id="capture-mode" class="device-select" style="margin-bottom: 0.5rem;">
+                <option value="0">Right Thumb</option>
+                <option value="1">Left Thumb</option>
+                <option value="2">Left 4-Finger </option>
+                <option value="3">Right 4-Finger </option>
+                
+            </select>
+
+            <label style="font-size: 0.7rem; color: var(--text-dim); margin-bottom: 0.25rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Target Hardware</label>
             <select id="device-list" class="device-select">
                 <option value="">SCANNING FOR HARDWARE...</option>
             </select>
-            <button class="btn" id="capture-btn" disabled>Start Capture</button>
+            <button class="btn" id="capture-btn" disabled style="margin-top: 1rem;">Start Capture</button>
         </div>
 
         <div class="footer">
@@ -359,11 +369,16 @@
         }
 
         async function startCapture() {
+            const mode = document.getElementById('capture-mode').value;
             elements.loading.style.display = 'flex';
             elements.btn.disabled = true;
 
             try {
-                const res = await fetch('/api/capture', { method: 'POST' });
+                const res = await fetch('/api/capture', { 
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mode: parseInt(mode) })
+                });
                 const data = await res.json();
 
                 if (data.success) {
