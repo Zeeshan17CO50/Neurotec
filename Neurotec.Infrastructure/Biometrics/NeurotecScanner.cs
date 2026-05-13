@@ -118,8 +118,20 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
         {
             _logger.LogInformation("Starting {Mode} acquisition pipeline (Timeout: {Timeout}s)...", mode, timeoutSeconds);
 
-            AssignHardwareToClient();
+            if (!AssignHardwareToClient())
+            {
+                _logger.LogWarning("Capture aborted: No biometric hardware detected.");
+                return BiometricResult.Fail("Hardware Missing: Please ensure the fingerprint scanner is plugged in.");
+            }
+
             ApplyExtractionSettings();
+
+            // CRITICAL: Link the cancellation token to the native SDK cancel method
+            using var registration = cts.Token.Register(() => 
+            {
+                _logger.LogWarning("Cancellation triggered. Signaling native SDK to stop...");
+                _biometricClient.Cancel();
+            });
 
             // Execute Native Acquisition
             var status = await Task.Run(() => _biometricClient.CreateTemplate(subject), cts.Token);
@@ -131,12 +143,28 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
                 return ProcessCaptureResult(subject);
             }
 
-            return BiometricResult.Fail($"Capture failed: {status}");
+            // If status is Canceled, check if it was due to our internal timeout
+            if (status == NBiometricStatus.Canceled)
+            {
+                if (cts.Token.IsCancellationRequested && !ct.IsCancellationRequested)
+                {
+                    return BiometricResult.Fail("Capture Timeout: No finger detected within the time limit.");
+                }
+                return BiometricResult.Fail("Operation Canceled");
+            }
+
+            // Return the raw SDK status name (e.g., "TooManyObjects", "PositionUnknown")
+            return BiometricResult.Fail(status.ToString());
         }
         catch (OperationCanceledException)
         {
-            _logger.LogWarning("Capture operation timed out or was cancelled by the user.");
-            return BiometricResult.Fail("Capture Timeout: No finger detected on sensor.");
+            return BiometricResult.Fail("Capture Timeout: Operation exceeded the allowed time.");
+        }
+        catch (AggregateException aggEx)
+        {
+            var inner = aggEx.Flatten().InnerException;
+            _logger.LogError(inner, "SDK reported a fatal error during acquisition.");
+            return BiometricResult.Fail($"SDK Fatal Error: {inner?.Message ?? "Unknown"}");
         }
         catch (Exception ex)
         {
@@ -163,15 +191,22 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
         }
     }
 
-    private void AssignHardwareToClient()
+    private bool AssignHardwareToClient()
     {
+        // Force a refresh of the device list
+        _biometricClient.DeviceManager.Initialize();
+
         // Automatically select the first available finger scanner
         var scanner = _biometricClient.DeviceManager.Devices.OfType<NFingerScanner>().FirstOrDefault();
         if (scanner != null)
         {
             _biometricClient.FingerScanner = scanner;
             _logger.LogDebug("Target hardware assigned: {Device}", scanner.DisplayName);
+            return true;
         }
+
+        _biometricClient.FingerScanner = null;
+        return false;
     }
 
     private void ApplyExtractionSettings()

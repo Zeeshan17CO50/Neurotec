@@ -261,6 +261,41 @@
             }
         }
 
+        /* NEW: Error Toast Notification */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--status-red);
+            color: white;
+            padding: 1rem 2rem;
+            border-radius: 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
+            z-index: 1000;
+            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .toast-icon {
+            width: 20px;
+            height: 20px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+        }
+
         .footer {
             margin-top: 2rem;
             text-align: center;
@@ -383,6 +418,12 @@
         </div>
     </div>
 
+    <!-- Error Toast -->
+    <div id="error-toast" class="toast">
+        <div class="toast-icon">✕</div>
+        <span id="error-message">Error Message</span>
+    </div>
+
     <script>
         const elements = {
             dot: document.getElementById('status-dot'),
@@ -395,8 +436,18 @@
             loading: document.getElementById('loading'),
             clock: document.getElementById('clock'),
             deviceList: document.getElementById('device-list'),
-            modeSelect: document.getElementById('capture-mode')
+            modeSelect: document.getElementById('capture-mode'),
+            toast: document.getElementById('error-toast'),
+            toastMsg: document.getElementById('error-message')
         };
+
+        function showError(msg) {
+            elements.toastMsg.innerText = msg;
+            elements.toast.classList.add('show');
+            setTimeout(() => {
+                elements.toast.classList.remove('show');
+            }, 5000);
+        }
 
         // Reset Functionality with State Preservation
         async function resetPage(clearInputs = true) {
@@ -420,6 +471,8 @@
             elements.quality.innerText = 'SCORE: 0';
             elements.loading.style.display = 'none';
             elements.placeholder.style.display = 'block';
+            elements.placeholder.innerText = 'Ready for acquisition.\nClick start to begin scan.';
+            elements.placeholder.style.color = 'var(--text-dim)';
             
             // 2. Reset Form Fields (Only if clearInputs is true)
             if (clearInputs) {
@@ -504,10 +557,12 @@
                     elements.quality.innerText = 'SCORE: ' + data.quality;
                     elements.quality.style.display = 'block';
                 } else {
-                    alert('Capture Failed: ' + data.error);
+                    showError(data.error || 'Capture Failed');
+                    elements.placeholder.innerText = data.error;
+                    elements.placeholder.style.color = 'var(--status-red)';
                 }
             } catch (e) {
-                alert('Connection Error');
+                showError('Connection Error: Service might be offline.');
             } finally {
                 elements.loading.style.display = 'none';
                 updateStatus();
