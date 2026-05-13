@@ -47,6 +47,9 @@ The application follows **Clean Architecture principles** and **SOLID patterns**
 
 The project follows a layered Clean Architecture implementation with a focus on decoupling the native SDK lifecycle from the API layer.
 
+## User flow:
+<img width="1135" height="2197" alt="userflow" src="https://github.com/user-attachments/assets/e800dbb4-aaa0-45e8-8c49-3caaad4aca3f" />
+
 ## Logical flow :
 <img width="1346" height="894" alt="image" src="https://github.com/user-attachments/assets/5f9e139d-f2a3-4e14-afaf-4103c2e7b574" />
 
