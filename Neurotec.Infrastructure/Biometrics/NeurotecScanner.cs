@@ -75,7 +75,27 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
         }
     }
 
-    public ScannerStatus GetStatus() => _status;
+    public ScannerStatus GetStatus()
+    {
+        // Self-healing: If we were in an error state but we now see devices, we are ready.
+        if (_status == ScannerStatus.Error)
+        {
+            try
+            {
+                // Simple check: do we have any devices?
+                if (_biometricClient.DeviceManager.Devices.Count > 0)
+                {
+                    _logger.LogInformation("Self-healing: Devices detected, transitioning from Error to Ready.");
+                    _status = ScannerStatus.Ready;
+                }
+            }
+            catch
+            {
+                // Still in error
+            }
+        }
+        return _status;
+    }
 
     public List<string> GetDevices()
     {
@@ -100,7 +120,7 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
         }
     }
 
-    public async Task<BiometricResult> CaptureAsync(FingerCaptureMode mode, CancellationToken ct = default)
+    public async Task<BiometricResult> CaptureAsync(FingerCaptureMode mode, string? deviceName = null, CancellationToken ct = default)
     {
         if (_status == ScannerStatus.Error)
             return BiometricResult.Fail("Biometric Engine is in an error state. Check licensing.");
@@ -116,12 +136,12 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
 
         try
         {
-            _logger.LogInformation("Starting {Mode} acquisition pipeline (Timeout: {Timeout}s)...", mode, timeoutSeconds);
+            _logger.LogInformation("Starting {Mode} acquisition pipeline for device {Device} (Timeout: {Timeout}s)...", mode, deviceName ?? "Auto", timeoutSeconds);
 
-            if (!AssignHardwareToClient())
+            if (!AssignHardwareToClient(deviceName))
             {
-                _logger.LogWarning("Capture aborted: No biometric hardware detected.");
-                return BiometricResult.Fail("Hardware Missing: Please ensure the fingerprint scanner is plugged in.");
+                _logger.LogWarning("Capture aborted: Target hardware '{Device}' not found or busy.", deviceName ?? "Any");
+                return BiometricResult.Fail($"Hardware Missing: {deviceName ?? "No scanner detected"}. Please check connections.");
             }
 
             ApplyExtractionSettings();
@@ -191,22 +211,51 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
         }
     }
 
-    private bool AssignHardwareToClient()
+    private bool AssignHardwareToClient(string? deviceName = null)
     {
-        // Force a refresh of the device list
-        _biometricClient.DeviceManager.Initialize();
-
-        // Automatically select the first available finger scanner
-        var scanner = _biometricClient.DeviceManager.Devices.OfType<NFingerScanner>().FirstOrDefault();
-        if (scanner != null)
+        try
         {
-            _biometricClient.FingerScanner = scanner;
-            _logger.LogDebug("Target hardware assigned: {Device}", scanner.DisplayName);
-            return true;
-        }
+            // Force a refresh of the device list
+            _biometricClient.DeviceManager.Initialize();
 
-        _biometricClient.FingerScanner = null;
-        return false;
+            var scanners = _biometricClient.DeviceManager.Devices.OfType<NFingerScanner>().ToList();
+            
+            if (!scanners.Any())
+            {
+                _logger.LogWarning("No fingerprint scanners detected in DeviceManager.");
+                _biometricClient.FingerScanner = null;
+                return false;
+            }
+
+            NFingerScanner? selectedScanner = null;
+
+            if (!string.IsNullOrEmpty(deviceName))
+            {
+                selectedScanner = scanners.FirstOrDefault(d => d.DisplayName.Equals(deviceName, StringComparison.OrdinalIgnoreCase));
+                if (selectedScanner == null)
+                {
+                    _logger.LogWarning("Requested device '{Device}' not found. Available: {Available}", deviceName, string.Join(", ", scanners.Select(s => s.DisplayName)));
+                }
+            }
+
+            // Fallback to first scanner if no specific device requested or found
+            selectedScanner ??= scanners.FirstOrDefault();
+
+            if (selectedScanner != null)
+            {
+                _biometricClient.FingerScanner = selectedScanner;
+                _logger.LogInformation("Target hardware assigned: {Device}", selectedScanner.DisplayName);
+                return true;
+            }
+
+            _biometricClient.FingerScanner = null;
+            return false;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to assign hardware to biometric client.");
+            return false;
+        }
     }
 
     private void ApplyExtractionSettings()

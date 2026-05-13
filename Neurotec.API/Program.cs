@@ -95,12 +95,19 @@ try
 
     app.MapGet("/api/status", (IBiometricScanner scanner) =>
     {
+        var currentStatus = scanner.GetStatus();
+        var devices = scanner.GetDevices();
+        
+        // Dynamic hardware detection: True if SDK is okay AND at least one real device is connected
+        bool hasHardware = devices.Any() && !devices.Contains("No scanners detected") && !devices.Contains("Hardware discovery error");
+
         return Results.Ok(new
         {
-            status = scanner.GetStatus().ToString(),
-            isReady = scanner.GetStatus() == Neurotec.Domain.Enums.ScannerStatus.Ready,
+            status = currentStatus.ToString(),
+            isReady = currentStatus == Neurotec.Domain.Enums.ScannerStatus.Ready && hasHardware,
             sdkVersion = "Neurotec Biometric 2025.2 (Pro)",
-            hardwareDetected = scanner.GetStatus() != Neurotec.Domain.Enums.ScannerStatus.Error,
+            hardwareDetected = hasHardware,
+            deviceCount = hasHardware ? devices.Count : 0,
             servicePath = AppContext.BaseDirectory,
             timestamp = DateTime.UtcNow
         });
@@ -114,7 +121,7 @@ try
 
     app.MapPost("/api/capture", async (CaptureRequest request, IBiometricScanner scanner, CancellationToken ct) =>
     {
-        var result = await scanner.CaptureAsync(request.Mode, ct);
+        var result = await scanner.CaptureAsync(request.Mode, request.DeviceName, ct);
 
         if (!result.Success)
         {
@@ -150,4 +157,4 @@ catch (Exception ex)
     throw;
 }
 
-public record CaptureRequest(FingerCaptureMode Mode);
+public record CaptureRequest(FingerCaptureMode Mode, string? DeviceName);

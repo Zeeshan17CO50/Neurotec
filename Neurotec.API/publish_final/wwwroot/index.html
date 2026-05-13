@@ -504,6 +504,9 @@
                     if (selectedValue && data.devices.includes(selectedValue)) {
                         elements.deviceList.value = selectedValue;
                     }
+                    
+                    // Update button state based on new device list
+                    updateStatus();
                 } else {
                     const opt = document.createElement('option');
                     opt.value = "";
@@ -522,10 +525,15 @@
 
                 elements.text.innerText = data.status.toUpperCase();
                 elements.dot.className = 'pulse-dot ' + (data.isReady ? 'active' : 'busy');
-                elements.btn.disabled = !data.isReady;
 
                 document.getElementById('diag-sdk').innerText = data.sdkVersion;
-                document.getElementById('diag-hw').innerText = data.hardwareDetected ? 'CONNECTED' : 'DISCONNECTED';
+                const hwStatus = document.getElementById('diag-hw');
+                hwStatus.innerText = data.hardwareDetected ? 'CONNECTED' : 'DISCONNECTED';
+                hwStatus.style.color = data.hardwareDetected ? 'var(--status-green)' : 'var(--status-red)';
+
+                // Enable button only if ready AND hardware is detected AND a device is selected
+                const hasSelectedDevice = elements.deviceList.value && elements.deviceList.value !== "";
+                elements.btn.disabled = !data.isReady || !data.hardwareDetected || !hasSelectedDevice;
 
             } catch (e) {
                 elements.text.innerText = 'DISCONNECTED';
@@ -546,7 +554,10 @@
                 const res = await fetch('/api/capture', { 
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mode: parseInt(mode) })
+                    body: JSON.stringify({ 
+                        mode: parseInt(mode),
+                        deviceName: elements.deviceList.value 
+                    })
                 });
                 const data = await res.json();
 
@@ -571,6 +582,9 @@
 
         elements.btn.addEventListener('click', startCapture);
         elements.resetBtn.addEventListener('click', () => resetPage(true));
+        
+        // Immediate UI feedback on device selection
+        elements.deviceList.addEventListener('change', updateStatus);
 
         // Clock Update
         setInterval(() => {
