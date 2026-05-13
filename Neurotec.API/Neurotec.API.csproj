@@ -13,7 +13,6 @@
   <ItemGroup>
     <None Remove="Fingers.ndf" />
     <None Remove="FingersMatching.ndf" />
-    <None Remove="Palms.ndf" />
   </ItemGroup>
 
   <ItemGroup>
@@ -21,9 +20,6 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="FingersMatching.ndf">
-      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
-    </Content>
-    <Content Include="Palms.ndf">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>

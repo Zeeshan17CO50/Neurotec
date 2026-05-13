@@ -1440,14 +1440,6 @@
           }
         }
       },
-      "Neurotec/2025.2.0.0": {
-        "runtime": {
-          "Neurotec.dll": {
-            "assemblyVersion": "2025.2.0.0",
-            "fileVersion": "2025.2.0.0"
-          }
-        }
-      },
       "Neurotec.Devices/2025.2.0.0": {
         "runtime": {
           "Neurotec.Devices.dll": {
@@ -1475,6 +1467,14 @@
       "Neurotec.Licensing/2025.2.0.0": {
         "runtime": {
           "Neurotec.Licensing.dll": {
+            "assemblyVersion": "2025.2.0.0",
+            "fileVersion": "2025.2.0.0"
+          }
+        }
+      },
+      "Neurotec/2025.2.0.0": {
+        "runtime": {
+          "Neurotec.dll": {
             "assemblyVersion": "2025.2.0.0",
             "fileVersion": "2025.2.0.0"
           }
@@ -1560,11 +1560,6 @@
       "serviceable": false,
       "sha512": ""
     },
-    "Neurotec/2025.2.0.0": {
-      "type": "reference",
-      "serviceable": false,
-      "sha512": ""
-    },
     "Neurotec.Devices/2025.2.0.0": {
       "type": "reference",
       "serviceable": false,
@@ -1581,6 +1576,11 @@
       "sha512": ""
     },
     "Neurotec.Licensing/2025.2.0.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "Neurotec/2025.2.0.0": {
       "type": "reference",
       "serviceable": false,
       "sha512": ""
