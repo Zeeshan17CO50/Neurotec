@@ -57,7 +57,7 @@ public class NeurotecScanner : IBiometricScanner, IDisposable
             // Set status to ready early, as we'll handle minor init errors gracefully
             _status = ScannerStatus.Ready;
 
-            string components = "Biometrics.FingerExtraction,Biometrics.PalmExtraction,Devices.FingerScanners,Biometrics.FingerQualityAssessment";
+            string components = "Biometrics.FingerExtraction,Devices.FingerScanners,Biometrics.FingerQualityAssessment";
             string server = _settings.NeurotecSdk.LicenseServer ?? "/local";
             bool obtained = NLicense.ObtainComponents(server, 5000, components);
             
@@ -176,7 +176,6 @@ public class NeurotecScanner : IBiometricScanner, IDisposable
             // 5. Configure Professional Extraction & Quality Settings
             _biometricClient.FingersReturnBinarizedImage = true;
             _biometricClient.FingersQualityThreshold = 30;
-            _biometricClient.PalmsReturnBinarizedImage = true;
 
             Console.WriteLine($"[DEBUG]: Calling CreateTemplate (Native Acquisition)...");
             
@@ -210,7 +209,7 @@ public class NeurotecScanner : IBiometricScanner, IDisposable
         }
         catch (OperationCanceledException)
         {
-            return BiometricResult.Fail("Capture Timeout: No finger/palm detected on sensor.");
+            return BiometricResult.Fail("Capture Timeout: No finger detected on sensor.");
         }
         catch (Exception ex)
         {
@@ -244,10 +243,6 @@ public class NeurotecScanner : IBiometricScanner, IDisposable
                 AddFingersToSubject(subject, new[] { NFPosition.PlainRightFourFingers });
                 break;
         }
-
-        // Add a default palm for demonstration if required by the workflow
-        // subject.Palms.Add(new NPalm { Position = NPalmPosition.RightFullPalm });
-
         return subject;
     }
 
