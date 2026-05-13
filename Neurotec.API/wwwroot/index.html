@@ -397,8 +397,8 @@
             modeSelect: document.getElementById('capture-mode')
         };
 
-        // Reset Functionality with Graceful Stop
-        async function resetPage() {
+        // Reset Functionality with State Preservation
+        async function resetPage(clearInputs = true) {
             const isCapturing = elements.text.innerText.includes('CAPTURING');
             
             if (isCapturing) {
@@ -412,25 +412,28 @@
                 }
             }
 
-            // 1. Clear Capture Data
+            // 1. Clear Capture Result Data (Always cleared)
             elements.img.src = '';
             elements.img.style.display = 'none';
             elements.quality.style.display = 'none';
             elements.quality.innerText = 'SCORE: 0';
             elements.loading.style.display = 'none';
-            
-            // 2. Reset UI Indicators
             elements.placeholder.style.display = 'block';
             
-            // 3. Reset Form Fields
-            elements.modeSelect.selectedIndex = 0;
+            // 2. Reset Form Fields (Only if clearInputs is true)
+            if (clearInputs) {
+                elements.modeSelect.selectedIndex = 0;
+                console.log("[UI]: Form fields reset to defaults.");
+            }
             
-            console.log("[UI]: Dashboard reset to initial state.");
             updateStatus();
         }
 
         async function loadDevices() {
             try {
+                // Remember current selection before refresh
+                const selectedValue = elements.deviceList.value;
+
                 const res = await fetch('/api/devices');
                 const data = await res.json();
 
@@ -442,6 +445,11 @@
                         opt.innerText = device;
                         elements.deviceList.appendChild(opt);
                     });
+                    
+                    // Restore selection if it still exists in the new list
+                    if (selectedValue && data.devices.includes(selectedValue)) {
+                        elements.deviceList.value = selectedValue;
+                    }
                 } else {
                     const opt = document.createElement('option');
                     opt.value = "";
@@ -473,8 +481,8 @@
         }
 
         async function startCapture() {
-            // Clear all existing data before starting capture
-            resetPage();
+            // Only clear capture data, do NOT reset dropdowns
+            await resetPage(false);
 
             const mode = elements.modeSelect.value;
             elements.loading.style.display = 'flex';
@@ -506,7 +514,7 @@
         }
 
         elements.btn.addEventListener('click', startCapture);
-        elements.resetBtn.addEventListener('click', resetPage);
+        elements.resetBtn.addEventListener('click', () => resetPage(true));
 
         // Clock Update
         setInterval(() => {
