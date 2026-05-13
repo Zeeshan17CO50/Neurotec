@@ -130,6 +130,12 @@ try
         });
     });
 
+    app.MapPost("/api/cancel", (IBiometricScanner scanner) =>
+    {
+        scanner.StopCapture();
+        return Results.Ok(new { success = true, message = "Capture stop requested" });
+    });
+
     app.Run();
 }
 catch (Exception ex)

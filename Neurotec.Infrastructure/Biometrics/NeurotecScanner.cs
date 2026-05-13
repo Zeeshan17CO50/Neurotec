@@ -150,6 +150,19 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
         }
     }
 
+    public void StopCapture()
+    {
+        try
+        {
+            _logger.LogInformation("Graceful stop requested by user. Cancelling active biometric operation...");
+            _biometricClient.Cancel();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error occurred while attempting to stop the capture operation.");
+        }
+    }
+
     private void AssignHardwareToClient()
     {
         // Automatically select the first available finger scanner

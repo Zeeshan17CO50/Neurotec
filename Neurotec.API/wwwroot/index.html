@@ -32,51 +32,66 @@
                 radial-gradient(circle at 0% 100%, #0f172a 0%, transparent 30%);
             color: var(--text-main);
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            height: 100vh;
+            min-height: 100vh; 
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow: hidden;
+            overflow-y: auto; 
+            overflow-x: hidden;
+            padding: 2rem 1rem; 
         }
 
         .dashboard {
-            width: 500px;
+            width: 95%;
+            max-width: 680px; 
             background: var(--card-bg);
-            backdrop-filter: blur(12px);
-            border: 1px solid var(--border-color);
-            border-radius: 16px;
-            padding: 2.5rem;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(16px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 24px;
+            padding: 2rem;
+            box-shadow: 
+                0 25px 50px -12px rgba(0, 0, 0, 0.7),
+                inset 0 0 0 1px rgba(255, 255, 255, 0.05);
             position: relative;
+            animation: fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         .header {
             text-align: center;
-            margin-bottom: 2rem;
+            margin-bottom: 1.5rem;
         }
 
         .header h1 {
-            font-size: 1.25rem;
-            letter-spacing: 0.1em;
+            font-size: 1.15rem;
+            letter-spacing: 0.15em;
+            font-weight: 800;
             text-transform: uppercase;
-            color: var(--accent-primary);
-            margin-bottom: 0.5rem;
+            background: linear-gradient(to right, #60a5fa, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 0.25rem;
         }
 
         .header p {
-            font-size: 0.8rem;
+            font-size: 0.75rem;
             color: var(--text-dim);
+            letter-spacing: 0.05em;
         }
 
         .status-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            background: rgba(0, 0, 0, 0.3);
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            margin-bottom: 1.5rem;
-            border: 1px solid rgba(255, 255, 255, 0.05);
+            background: rgba(0, 0, 0, 0.4);
+            padding: 0.65rem 1rem;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            border: 1px solid rgba(255, 255, 255, 0.03);
         }
 
         .status-indicator {
@@ -252,11 +267,67 @@
             color: var(--text-dim);
             opacity: 0.6;
         }
+
+        /* THEMED: Premium Blue Reset Button */
+        .reset-link {
+            position: absolute;
+            top: 1.5rem;
+            right: 1.5rem;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--border-color);
+            color: var(--text-dim);
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            font-size: 0.65rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 100;
+            backdrop-filter: blur(4px);
+        }
+
+        .reset-link:hover {
+            border-color: var(--accent-primary);
+            color: var(--text-main);
+            background: rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .reset-link:active {
+            transform: scale(0.97);
+        }
+
+        .reset-link:focus {
+            outline: 2px solid var(--accent-glow);
+            outline-offset: 2px;
+        }
+
+        /* Mobile Responsiveness */
+        @media (max-width: 600px) {
+            .dashboard {
+                width: 95%;
+                padding: 1.5rem;
+            }
+            .reset-link {
+                position: relative;
+                top: 0;
+                right: 0;
+                width: 100%;
+                margin-bottom: 1.5rem;
+                display: flex;
+                justify-content: center;
+            }
+        }
     </style>
 </head>
 
 <body>
     <div class="dashboard">
+        <!-- Reset Button -->
+        <button id="reset-btn" class="reset-link">Reset System</button>
+
         <div class="header">
             <h1>Neurotec Professional</h1>
             <p>VFS Global Biometric Solution</p>
@@ -297,7 +368,6 @@
                 <option value="1">Left Thumb</option>
                 <option value="2">Left 4-Finger </option>
                 <option value="3">Right 4-Finger </option>
-                
             </select>
 
             <label style="font-size: 0.7rem; color: var(--text-dim); margin-bottom: 0.25rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Target Hardware</label>
@@ -317,13 +387,47 @@
             dot: document.getElementById('status-dot'),
             text: document.getElementById('status-text'),
             btn: document.getElementById('capture-btn'),
+            resetBtn: document.getElementById('reset-btn'),
             img: document.getElementById('preview-img'),
             placeholder: document.getElementById('placeholder'),
             quality: document.getElementById('quality'),
             loading: document.getElementById('loading'),
             clock: document.getElementById('clock'),
-            deviceList: document.getElementById('device-list')
+            deviceList: document.getElementById('device-list'),
+            modeSelect: document.getElementById('capture-mode')
         };
+
+        // Reset Functionality with Graceful Stop
+        async function resetPage() {
+            const isCapturing = elements.text.innerText.includes('CAPTURING');
+            
+            if (isCapturing) {
+                console.log("[UI]: Active capture detected. Requesting graceful stop...");
+                elements.text.innerText = "STOPPING...";
+                
+                try {
+                    await fetch('/api/cancel', { method: 'POST' });
+                } catch (e) {
+                    console.error("Failed to signal cancel to backend", e);
+                }
+            }
+
+            // 1. Clear Capture Data
+            elements.img.src = '';
+            elements.img.style.display = 'none';
+            elements.quality.style.display = 'none';
+            elements.quality.innerText = 'SCORE: 0';
+            elements.loading.style.display = 'none';
+            
+            // 2. Reset UI Indicators
+            elements.placeholder.style.display = 'block';
+            
+            // 3. Reset Form Fields
+            elements.modeSelect.selectedIndex = 0;
+            
+            console.log("[UI]: Dashboard reset to initial state.");
+            updateStatus();
+        }
 
         async function loadDevices() {
             try {
@@ -369,7 +473,10 @@
         }
 
         async function startCapture() {
-            const mode = document.getElementById('capture-mode').value;
+            // Clear all existing data before starting capture
+            resetPage();
+
+            const mode = elements.modeSelect.value;
             elements.loading.style.display = 'flex';
             elements.btn.disabled = true;
 
@@ -399,6 +506,7 @@
         }
 
         elements.btn.addEventListener('click', startCapture);
+        elements.resetBtn.addEventListener('click', resetPage);
 
         // Clock Update
         setInterval(() => {

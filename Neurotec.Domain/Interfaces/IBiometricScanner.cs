@@ -6,6 +6,7 @@ namespace Neurotec.Domain.Interfaces;
 public interface IBiometricScanner
 {
     Task<BiometricResult> CaptureAsync(FingerCaptureMode mode, CancellationToken ct = default);
+    void StopCapture();
     List<string> GetDevices();
     ScannerStatus GetStatus();
     event Action<ScannerStatus> OnStatusChanged;
