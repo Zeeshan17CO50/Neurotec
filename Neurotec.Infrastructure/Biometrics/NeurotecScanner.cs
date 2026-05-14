@@ -267,17 +267,40 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
 
     private BiometricResult ProcessCaptureResult(NSubject subject)
     {
-        var finger = subject.Fingers.FirstOrDefault(f => f.Status == NBiometricStatus.Ok);
-        var image = finger?.Image;
-        var quality = finger?.Objects.FirstOrDefault()?.Quality ?? 0;
-
+        // For slaps/multi-finger captures, we want the overall status and individual finger data
+        var image = subject.Fingers.FirstOrDefault()?.Image;
         if (image == null) return BiometricResult.Fail("Template created but no valid image found.");
+
+        var fingerScores = new Dictionary<string, int>();
+        int totalQuality = 0;
+        int fingerCount = 0;
+
+        foreach (var finger in subject.Fingers)
+        {
+            var fingerQuality = finger.Objects.FirstOrDefault()?.Quality ?? 0;
+            var positionName = finger.Position.ToString().ToLower().Replace("plain", "").Trim();
+            
+            // Clean up names for the UI
+            if (positionName.Contains("index")) positionName = "index";
+            else if (positionName.Contains("middle")) positionName = "middle";
+            else if (positionName.Contains("ring")) positionName = "ring";
+            else if (positionName.Contains("little")) positionName = "little";
+            else if (positionName.Contains("thumb")) positionName = positionName.Contains("right") ? "right thumb" : "left thumb";
+
+            if (!fingerScores.ContainsKey(positionName))
+            {
+                fingerScores[positionName] = fingerQuality;
+                totalQuality += fingerQuality;
+                fingerCount++;
+            }
+        }
 
         using var bitmap = image.ToBitmap();
         return BiometricResult.Ok(new BiometricData
         {
             Base64Image = ConvertBitmapToBase64(bitmap),
-            QualityScore = quality,
+            QualityScore = fingerCount > 0 ? totalQuality / fingerCount : 0,
+            FingerScores = fingerScores,
             CapturedAt = DateTime.UtcNow
         });
     }
@@ -300,6 +323,7 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
             FingerCaptureMode.LeftThumb => NFPosition.LeftThumb,
             FingerCaptureMode.PlainLeftFourFingers => NFPosition.PlainLeftFourFingers,
             FingerCaptureMode.PlainRightFourFingers => NFPosition.PlainRightFourFingers,
+            FingerCaptureMode.TwoThumbs => NFPosition.PlainThumbs,
             _ => NFPosition.Unknown
         };
 

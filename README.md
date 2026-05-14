@@ -6,12 +6,12 @@
 
 The solution is designed as a scalable, enterprise-ready Windows Service application that provides:
 
-* Real-time fingerprint acquisition
-* Automatic biometric device detection (Mantra, CrossMatch, etc.)
-* REST API-based biometric operations including **Graceful Cancellation**
-* Centralized SDK/plugin management with an **optimized fingerprint-only footprint**
-* Modern lightweight "Glassmorphism" dashboard UI
-* MSI-based deployment support
+* **Professional Sequential Capture Workflow**: Specialized 4-4-2 enrollment process.
+* **Per-Finger Quality Assessment**: Granular scoring for individual fingers within slap captures.
+* **Automatic Progression**: Smart stage advancement based on configurable quality thresholds.
+* **Real-time Biometric Acquisition**: Powered by optimized native SDK plugins.
+* **Modern Dashboard UI**: A state-of-the-art "Glassmorphism" interface with full-screen error isolation.
+* **Graceful Lifecycle Management**: REST API-based operations including hardware-safe cancellation and system resets.
 
 The application follows **Clean Architecture principles** and **SOLID patterns** to ensure production-grade reliability and extreme maintainability.
 
@@ -19,13 +19,16 @@ The application follows **Clean Architecture principles** and **SOLID patterns**
 
 # Key Features
 
-* **Graceful Reset Mechanism**: Allows interrupting active hardware scans without destabilizing device drivers.
-* **Selection Persistence**: Dashboard remembers your scanner and mode choices even during background hardware polling.
-* **Enterprise-grade biometric fingerprint capture**: Powered by Neurotec Professional SDK.
-* **RESTful API communication**: Supporting Start, Status, and Cancel operations.
-* **Windows Service support**: Native integration with Service Control Manager (SCM).
+* **Sequential 4-4-2 Enrollment**: Implements the industry-standard workflow: Right 4 Fingers → Left 4 Fingers → Both Thumbs.
+* **Granular Biometric Metadata**: Extracts and displays individual quality scores for every finger in a slap (Index, Middle, Ring, Little).
+* **Automatic Stage Advancement**: Automatically progresses to the next capture stage once the quality threshold (default: 70) is met.
+* **Graceful Reset Mechanism**: Allows interrupting active hardware scans or wiping the current enrollment session safely.
+* **Full-Screen Error Isolation**: Robust error handling that masks the dashboard during hardware failures to prevent UI state corruption.
+* **Consolidated JSON Output**: Generates a unified biometric data structure across all capture stages for easy integration.
+* **RESTful API Architecture**: Standardized communication for Status, Detection, Capture, and Cancellation.
+* **Windows Service Support**: Native integration for background execution and automatic startup.
 * **Modern Dashboard UI**: Built with responsive Vanilla CSS and glassmorphism effects.
-* **MSI installer support**: Using WiX Toolset for automated silent deployment.
+* **MSI Deployment**: Automated silent installation using WiX Toolset.
 * **Professional Diagnostics**: Structured logging with `ILogger` and diagnostic file output.
 * **Neurotec Professional SDK integration**: Centralized SDK configuration management
 ---
@@ -61,30 +64,30 @@ The project follows a layered Clean Architecture implementation with a focus on 
 ```text
 Neurotec.API
 │
-├── Minimal API Endpoints (Capture, Status, Cancel)
-├── Dashboard UI Hosting
+├── Minimal API Endpoints (Sequential Capture Logic)
+├── Dashboard UI Hosting (index.html with State Machine)
 ├── Windows Service Hosting
 └── HTTP API Layer
 
 Neurotec.Application
 │
-├── Application Workflows
+├── Application Workflows (Enrollment Orchestration)
 ├── Business Use Cases
 └── Service Orchestration
 
 Neurotec.Domain
 │
-├── Core Entities
-├── Interfaces
-├── Enums
+├── Core Entities (BiometricData with FingerScores)
+├── Interfaces (IBiometricScanner)
+├── Enums (TwoThumbs support)
 └── Domain Models
 
 Neurotec.Infrastructure
 │
-├── Neurotec SDK Integration
-├── Device Management
-├── Plugin Loading
-├── Fingerprint Capture
+├── Neurotec SDK Integration (NBiometricClient)
+├── Slap Segmentation (Individual Finger Extraction)
+├── Plugin Loading & Device Management
+└── Fingerprint Capture & Quality Normalization
 └── Hardware Communication
 
 Neurotec.Installer
@@ -97,15 +100,18 @@ Neurotec.Installer
 
 # Core Functionalities
 
-## Biometric Scanner Integration
+## Sequential Biometric Workflow
 
-The system integrates directly with the Neurotec SDK using `NBiometricClient` for:
+The system implements a professional enrollment sequence that ensures all required biometrics are captured with high quality before completion.
 
-* Fingerprint acquisition
-* Finger quality assessment
-* Device enumeration
-* Plugin management
-* Template generation
+* **Stage 1**: Right 4 Fingers (Slap)
+* **Stage 2**: Left 4 Fingers (Slap)
+* **Stage 3**: Both Thumbs (4-4-2 Workflow)
+
+### Per-Finger Extraction
+During slap captures (4 fingers), the infrastructure layer automatically segments the image and extracts individual quality scores (0-100) for:
+*   `Index`, `Middle`, `Ring`, `Little`
+*   `Left Thumb`, `Right Thumb` (in Two-Thumb mode)
 
 ### Supported Functionalities
 
@@ -119,25 +125,24 @@ The system integrates directly with the Neurotec SDK using `NBiometricClient` fo
 
 ## Plugin & Device Management
 
-The system dynamically loads biometric plugins from the application directory.
+The system dynamically loads biometric plugins from the application directory, supporting a wide range of hardware through a unified interface.
 
 ### Supported Plugin Categories
 
-* Finger Scanners
-* Iris Scanners
-* Signature Devices
-* Cameras
-* Multi-modal Devices
+* Finger Scanners (Optimized Footprint)
+* Multi-finger Slap Scanners
+* Two-Thumb Capture Devices
 
 ### Example Supported Vendors
 
-* CrossMatch
+* CrossMatch (Patrol/Guardian series)
+* Mantra (MFS series)
 
 # REST API Endpoints
 
 ### Health Status
 `GET /api/status`
-Returns SDK status, hardware readiness, and detailed diagnostic metadata.
+Returns SDK status, hardware readiness, version info, and hardware detection state.
 
 ### Device Detection
 `GET /api/devices`
@@ -145,9 +150,12 @@ Returns a list of connected biometric devices with automatic display-name mappin
 
 ### Fingerprint Capture
 `POST /api/capture`
-Initiates hardware scan. Supports multiple modes (Thumb, Slap, etc.).
+Initiates hardware scan. Supports mode mapping:
+*   `3`: Right 4-Finger
+*   `2`: Left 4-Finger
+*   `4`: Two-Thumbs (Plain Thumbs)
 
-### Graceful Cancel (NEW)
+### Graceful Cancel
 `POST /api/cancel`
 Signals the active scanner to stop acquisition and release the hardware safely.
 
@@ -170,7 +178,7 @@ Application configuration is managed via `appsettings.json` using strongly-typed
     ],
     "CaptureSettings": {
       "TimeoutMs": 40000,
-      "QualityThreshold": 30
+      "QualityThreshold": 70
     }
   }
 }
@@ -182,7 +190,7 @@ Application configuration is managed via `appsettings.json` using strongly-typed
 
 ## MSI Installer Support
 
-The project includes enterprise deployment automation.
+The project includes enterprise deployment automation for Windows Service environments.
 
 ### Deployment Scripts
 
@@ -206,31 +214,21 @@ The project includes enterprise deployment automation.
 Before installation ensure the client machine satisfies the following requirements.
 
 ## Operating System
-
-* Windows 10 (64-bit)
-* Windows 11 (64-bit)
+* Windows 10/11 (64-bit)
 
 ## Hardware Requirements
-
 * Minimum 4 GB RAM
 * Minimum 2 GB free disk space
 * USB 2.0/3.0 port
 
-## Required Permissions
-
-* Administrator access required
-
 ## Device Drivers
-
 Install official scanner drivers before setup:
-
 * Mantra MFS100/MFS110
-* CrossMatch drivers
-* Vendor-specific SDK drivers
+* CrossMatch Patrol ID / Guardian
+* Vendor-specific HID drivers
 
 ## Port Requirement
-
-Ensure Port `3000` is available.
+Ensure Port `3000` is available for the API and Dashboard.
 
 ---
 
@@ -273,9 +271,11 @@ No manual service configuration is required.
 
 ## Dashboard Verification
 Open: `http://localhost:3000/home`
-*   **Ready State**: Green dot indicates SDK is licensed and hardware is connected.
+*   **Workflow steps**: Top buttons indicate capture progress (R4 -> L4 -> Thumbs).
+*   **Ready State**: Green dot indicates hardware is connected and SDK is active.
+*   **Reset System**: Located in the control panel to clear enrollment data or cancel a scan.
 *   **Capturing State**: Orange pulse indicates hardware is active.
-*   **Reset System**: Use the top-right button to clear results or interrupt a scan.
+*   **Completion**: "Capture Complete (Click to Reset)" button appears after Stage 3.
 
 ## API Verification
 Open: `http://localhost:3000/api/status`
@@ -290,39 +290,32 @@ Response Example:
 ```
 
 ---
+
 # Logging & Diagnostics
 
 The system includes professional diagnostics for:
-
-* SDK initialization
-* Plugin loading
-* Device enumeration
-* Finger capture
-* License validation
-* API operations
-* Service lifecycle
+* SDK initialization & Plugin loading
+* Device enumeration & License validation
+* Finger capture & API operations
+* Slap segmentation & Quality extraction
+* Hardware connectivity & Service lifecycle
 
 ---
 
 # Security & Reliability
-
-* Windows Service isolation
-* Controlled SDK access
-* Plugin sandboxing
-* Automatic resource disposal
-* Exception handling
-* Capture timeout protection
-* Centralized configuration management
+* **Capture Timeout Protection**: Prevents hardware from locking up indefinitely.
+* **Error Isolation**: Dashboard-level error masking during biometric failures.
+* **Graceful Resource Disposal**: Ensures the Neurotec SDK client is properly disposed on service stop.
 
 ---
-# Available Features
 
-* Show biometric device listing
-* Right 4 finger scan
-* Right Thumb
-* Left 4 finger scan
-* Left Thumb
+# Available Capture Modes
+* **Right 4 finger scan** (Slap)
+* **Left 4 finger scan** (Slap)
+* **Both Thumbs** (4-4-2 mode)
+* **Single Finger** (Thumb/Index/etc.)
 
+---
 
 # Troubleshooting
 
@@ -330,26 +323,26 @@ The system includes professional diagnostics for:
 If the dashboard stays on "STOPPING..." for more than 5 seconds, the native SDK may be waiting for a hardware lock. Ensure the scanner is not being used by another application.
 
 ## Scanner Not Detected
-Ensure the optimized `FScanners` directory in the build folder contains the correct driver DLLs (e.g., `Mantra.dll`, `CrossMatch.dll`).
+Ensure the `FScanners` directory contains the correct driver DLLs for your vendor. Verify the service is running in `services.msc`.
 
 ## MSI Installer Size
 The installer should now be significantly smaller (~700MB) following the modality pruning.
 
+## Low Quality Scores
+Ensure the `QualityThreshold` in `appsettings.json` is set correctly (default: 70). Lower thresholds may be required for older scanners.
+
 ---
 
 # Support & Diagnostics
+* Review `service_debug.log` in the application root.
+* Check Windows Event Viewer (Source: `NeurotecBiometricService`).
+* Ensure Port `3000` is open for API communication.
 
-For technical support:
-*   Review `service_debug.log` in the application root.
-*   Check Windows Event Viewer (Source: `NeurotecBiometricService`).
-*   Ensure Port `3000` is open for API communication.
 # License
 
 This project uses:
-
 * Neurotec Professional SDK
 * WiX Toolset
 * .NET 10.0 Runtime
 
 Ensure valid licensing is configured for production environments.
-

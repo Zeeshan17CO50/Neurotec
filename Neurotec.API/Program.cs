@@ -133,6 +133,7 @@ try
             success = true,
             image = result.Data?.Base64Image,
             quality = result.Data?.QualityScore,
+            fingerScores = result.Data?.FingerScores,
             timestamp = result.Data?.CapturedAt
         });
     });
