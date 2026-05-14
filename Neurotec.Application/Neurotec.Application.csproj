@@ -1,7 +1,30 @@
-﻿<Project Sdk="Microsoft.NET.Sdk">
+<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
     <ProjectReference Include="..\Neurotec.Domain\Neurotec.Domain.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Reference Include="Neurotec">
+      <HintPath>..\libs\Neurotec\Neurotec.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Neurotec.Biometrics">
+      <HintPath>..\libs\Neurotec\Neurotec.Biometrics.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Neurotec.Biometrics.Client">
+      <HintPath>..\libs\Neurotec\Neurotec.Biometrics.Client.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Neurotec.Devices">
+      <HintPath>..\libs\Neurotec\Neurotec.Devices.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
+    <Reference Include="Neurotec.Licensing">
+      <HintPath>..\libs\Neurotec\Neurotec.Licensing.dll</HintPath>
+      <Private>true</Private>
+    </Reference>
   </ItemGroup>
 
   <PropertyGroup>

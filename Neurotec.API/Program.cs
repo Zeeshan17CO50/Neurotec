@@ -2,7 +2,7 @@ using System.Runtime.Versioning;
 using Microsoft.Extensions.Hosting.WindowsServices;
 using Neurotec.Domain.Configuration;
 using Neurotec.Domain.Enums;
-using Neurotec.Domain.Interfaces;
+using Neurotec.Application.Interfaces;
 using Neurotec.Infrastructure.Biometrics;
 
 [assembly: SupportedOSPlatform("windows")]
@@ -35,6 +35,7 @@ builder.Host.UseWindowsService(options =>
 });
 
 // Register Biometric Scanner (Professional SDK)
+builder.Services.AddSingleton<INeurotecService, NeurotecService>();
 builder.Services.AddSingleton<IBiometricScanner, NeurotecScanner>();
 
 // Use configured port (Default to 3000 if not set)

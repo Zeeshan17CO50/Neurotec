@@ -1,4 +1,4 @@
-namespace Neurotec.Domain.Entities;
+namespace Neurotec.Application.DTOs;
 
 public class BiometricData
 {
