@@ -4,11 +4,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VFS Global | Professional Biometric System</title>
+    <title>VFS Global | Enhanced Biometric Suite</title>
     <style>
         :root {
             --bg-color: #0d0d0f;
-            --card-bg: rgba(25, 25, 28, 0.8);
+            --card-bg: rgba(25, 25, 28, 0.95);
             --border-color: rgba(255, 255, 255, 0.1);
             --accent-primary: #3b82f6;
             --accent-glow: rgba(59, 130, 246, 0.5);
@@ -17,6 +17,7 @@
             --status-green: #10b981;
             --status-red: #ef4444;
             --status-yellow: #f59e0b;
+            --secondary-btn: rgba(255, 255, 255, 0.08);
         }
 
         * {
@@ -32,33 +33,24 @@
                 radial-gradient(circle at 0% 100%, #0f172a 0%, transparent 30%);
             color: var(--text-main);
             font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-            min-height: 100vh; 
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
-            overflow-y: auto; 
-            overflow-x: hidden;
-            padding: 2rem 1rem; 
+            padding: 2rem 1rem;
         }
 
         .dashboard {
-            width: 95%;
-            max-width: 680px; 
+            width: 100%;
+            max-width: 800px;
             background: var(--card-bg);
-            backdrop-filter: blur(16px);
-            border: 1px solid rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(20px);
+            border: 1px solid var(--border-color);
             border-radius: 24px;
-            padding: 2rem;
-            box-shadow: 
-                0 25px 50px -12px rgba(0, 0, 0, 0.7),
-                inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+            padding: 2.5rem;
+            box-shadow: 0 40px 100px -20px rgba(0, 0, 0, 0.8);
             position: relative;
-            animation: fadeIn 0.8s cubic-bezier(0.4, 0, 0.2, 1);
-        }
-
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+            overflow: hidden;
         }
 
         .header {
@@ -67,31 +59,32 @@
         }
 
         .header h1 {
-            font-size: 1.15rem;
+            font-size: 1.5rem;
             letter-spacing: 0.15em;
-            font-weight: 800;
+            font-weight: 900;
             text-transform: uppercase;
             background: linear-gradient(to right, #60a5fa, #3b82f6);
             -webkit-background-clip: text;
-            background-clip: text; /* Standard property for compatibility */
+            background-clip: text;
             -webkit-text-fill-color: transparent;
-            margin-bottom: 0.25rem;
         }
 
         .header p {
             font-size: 0.75rem;
             color: var(--text-dim);
             letter-spacing: 0.05em;
+            margin-top: 0.25rem;
         }
 
+        /* Status & Diags */
         .status-bar {
             display: flex;
             align-items: center;
             justify-content: space-between;
             background: rgba(0, 0, 0, 0.4);
-            padding: 0.65rem 1rem;
+            padding: 0.75rem 1.25rem;
             border-radius: 12px;
-            margin-bottom: 1rem;
+            margin-bottom: 0.5rem;
             border: 1px solid rgba(255, 255, 255, 0.03);
         }
 
@@ -99,8 +92,9 @@
             display: flex;
             align-items: center;
             gap: 0.75rem;
-            font-size: 0.85rem;
-            font-weight: 600;
+            font-size: 0.8rem;
+            font-weight: 700;
+            letter-spacing: 0.05em;
         }
 
         .pulse-dot {
@@ -123,479 +117,518 @@
         }
 
         @keyframes pulse {
-            0% {
-                opacity: 1;
-                transform: scale(1);
-            }
+            0% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.2); }
+            100% { opacity: 1; transform: scale(1); }
+        }
 
-            50% {
-                opacity: 0.5;
-                transform: scale(1.2);
-            }
+        .diag-row {
+            display: flex;
+            gap: 1.5rem;
+            padding: 0 1.25rem;
+            margin-bottom: 1.5rem;
+            font-size: 0.65rem;
+            color: var(--text-dim);
+            text-transform: uppercase;
+            font-weight: 700;
+            justify-content: space-between; 
+        }
 
-            100% {
-                opacity: 1;
-                transform: scale(1);
-            }
+        /* Stage Buttons */
+        .stage-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .stage-btn {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid var(--border-color);
+            color: var(--text-dim);
+            padding: 1rem 0.5rem;
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            gap: 0.5rem;
+            align-items: center;
+        }
+
+        .stage-btn .score-pill {
+            font-size: 0.6rem;
+            background: rgba(0, 0, 0, 0.5);
+            padding: 2px 10px;
+            border-radius: 20px;
+            opacity: 0;
+        }
+
+        .stage-btn.active {
+            border-color: var(--accent-primary);
+            color: var(--accent-primary);
+            background: rgba(59, 130, 246, 0.1);
+            box-shadow: 0 0 15px var(--accent-glow);
+        }
+
+        .stage-btn.completed {
+            border-color: var(--status-green);
+            color: var(--status-green);
+            background: rgba(16, 185, 129, 0.05);
+        }
+
+        .stage-btn.completed .score-pill {
+            opacity: 1;
+            color: var(--status-green);
         }
 
         .preview-area {
-            aspect-ratio: 4/3;
+            aspect-ratio: 16/9;
             background: #000;
-            border-radius: 8px;
+            border-radius: 16px;
             margin-bottom: 2rem;
             display: flex;
             align-items: center;
             justify-content: center;
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            overflow: hidden;
+            border: 1px solid rgba(255, 255, 255, 0.05);
             position: relative;
+            overflow: hidden;
+            box-shadow: inset 0 0 40px rgba(0,0,0,0.5);
         }
 
         #preview-img {
             max-width: 100%;
             max-height: 100%;
             display: none;
+            object-fit: contain;
         }
 
-        .placeholder-text {
-            color: var(--text-dim);
-            font-size: 0.8rem;
+        .score-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .score-card {
+            background: rgba(255, 255, 255, 0.02);
+            padding: 1rem;
+            border-radius: 12px;
             text-align: center;
-            padding: 2rem;
+            border: 1px solid var(--border-color);
         }
 
         .controls {
-            display: flex;
-            flex-direction: column;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
             gap: 1rem;
         }
 
-        .device-select {
-            background: rgba(0, 0, 0, 0.4);
-            border: 1px solid var(--border-color);
-            color: var(--text-main);
-            padding: 0.75rem;
-            border-radius: 8px;
-            font-size: 0.85rem;
-            outline: none;
-            transition: border-color 0.3s;
-            appearance: none;
-            background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
-            background-repeat: no-repeat;
-            background-position: right 1rem center;
-            background-size: 1em;
+        .main-btn {
+            padding: 1.25rem;
+            border-radius: 12px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
             cursor: pointer;
+            transition: all 0.3s;
+            border: 1px solid transparent;
+            font-size: 0.8rem;
         }
 
-        .device-select:focus {
-            border-color: var(--accent-primary);
-        }
-
-        .btn {
+        #start-btn {
             background: var(--accent-primary);
             color: white;
-            border: none;
-            padding: 1rem;
-            border-radius: 8px;
-            font-weight: 700;
-            cursor: pointer;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 4px 15px var(--accent-glow);
-        }
-
-        .btn:hover:not(:disabled) {
-            transform: translateY(-2px);
             box-shadow: 0 8px 25px var(--accent-glow);
-            background: #4f46e5;
+            grid-column: span 2;
         }
 
-        .btn:active:not(:disabled) {
-            transform: translateY(0);
+        #start-btn:disabled {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--text-dim);
+            border: 1px dashed var(--border-color);
+            box-shadow: none;
+            cursor: pointer;
         }
 
-        .btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
-            filter: grayscale(1);
+        .nav-btn {
+            background: var(--secondary-btn);
+            color: var(--text-main);
+            border: 1px solid var(--border-color);
         }
 
-        .quality-badge {
+        /* Error Overlay */
+        .error-overlay {
             position: absolute;
-            top: 10px;
-            right: 10px;
-            background: rgba(0, 0, 0, 0.7);
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 0.7rem;
-            font-weight: bold;
+            inset: 0;
+            background: #1a1a1e;
             display: none;
-            border: 1px solid var(--accent-primary);
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 3rem;
+            text-align: center;
+        }
+
+        /* Success Modal */
+        .modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.9);
+            backdrop-filter: blur(10px);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+            padding: 1rem;
+        }
+
+        .modal-content {
+            background: #1a1a1e;
+            border: 1px solid var(--border-color);
+            border-radius: 24px;
+            width: 100%;
+            max-width: 550px;
+            padding: 2.5rem;
+            position: relative;
+        }
+
+        #json-output {
+            background: #000;
+            color: var(--status-green);
+            padding: 1rem;
+            border-radius: 12px;
+            font-family: monospace;
+            font-size: 0.75rem;
+            white-space: pre-wrap;
+            max-height: 250px;
+            overflow-y: auto;
+            margin-bottom: 1.5rem;
+            border: 1px solid rgba(255,255,255,0.05);
         }
 
         .loading-overlay {
             position: absolute;
             inset: 0;
-            background: rgba(0, 0, 0, 0.6);
+            background: rgba(0, 0, 0, 0.85);
             display: none;
             align-items: center;
             justify-content: center;
             flex-direction: column;
             gap: 1rem;
+            z-index: 500;
         }
 
         .spinner {
-            width: 30px;
-            height: 30px;
-            border: 3px solid rgba(255, 255, 255, 0.1);
+            width: 40px;
+            height: 40px;
+            border: 4px solid rgba(255, 255, 255, 0.05);
             border-top-color: var(--accent-primary);
             border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            animation: spin 1s linear infinite;
         }
 
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
-
-        /* NEW: Error Toast Notification */
-        .toast {
-            position: fixed;
-            bottom: 2rem;
-            left: 50%;
-            transform: translateX(-50%) translateY(100px);
-            background: var(--status-red);
-            color: white;
-            padding: 1rem 2rem;
-            border-radius: 12px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            box-shadow: 0 10px 25px rgba(239, 68, 68, 0.4);
-            z-index: 1000;
-            transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-
-        .toast.show {
-            transform: translateX(-50%) translateY(0);
-        }
-
-        .toast-icon {
-            width: 20px;
-            height: 20px;
-            background: rgba(255, 255, 255, 0.2);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 0.7rem;
-        }
-
-        .footer {
-            margin-top: 2rem;
-            text-align: center;
-            font-size: 0.7rem;
-            color: var(--text-dim);
-            opacity: 0.6;
-        }
-
-        /* THEMED: Premium Blue Reset Button */
-        .reset-link {
-            position: absolute;
-            top: 1.5rem;
-            right: 1.5rem;
-            background: rgba(255, 255, 255, 0.03);
-            border: 1px solid var(--border-color);
-            color: var(--text-dim);
-            padding: 0.5rem 1rem;
-            border-radius: 6px;
-            font-size: 0.65rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.08em;
-            cursor: pointer;
-            transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-            z-index: 100;
-            backdrop-filter: blur(4px);
-        }
-
-        .reset-link:hover {
-            border-color: var(--accent-primary);
-            color: var(--text-main);
-            background: rgba(59, 130, 246, 0.1);
-            box-shadow: 0 0 15px var(--accent-glow);
-        }
-
-        .reset-link:active {
-            transform: scale(0.97);
-        }
-
-        .reset-link:focus {
-            outline: 2px solid var(--accent-glow);
-            outline-offset: 2px;
-        }
-
-        /* Mobile Responsiveness */
-        @media (max-width: 600px) {
-            .dashboard {
-                width: 95%;
-                padding: 1.5rem;
-            }
-            .reset-link {
-                position: relative;
-                top: 0;
-                right: 0;
-                width: 100%;
-                margin-bottom: 1.5rem;
-                display: flex;
-                justify-content: center;
-            }
-        }
+        @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 
 <body>
     <div class="dashboard">
-        <!-- Reset Button -->
-        <button id="reset-btn" class="reset-link">Reset System</button>
+        <!-- Error Overlay -->
+        <div id="error-screen" class="error-overlay">
+            <div style="font-size: 3rem; color: var(--status-red); margin-bottom: 1.5rem;">✕</div>
+            <h2 style="color: white; margin-bottom: 0.5rem;">Hardware Failure</h2>
+            <p id="error-msg" style="color: var(--text-dim); margin-bottom: 2rem; font-size: 0.9rem;"></p>
+            <button class="main-btn" style="background: var(--status-red); color: white; min-width: 180px;" onclick="hideError()">Dismiss Error</button>
+        </div>
 
         <div class="header">
             <h1>Neurotec Professional</h1>
             <p>VFS Global Biometric Solution</p>
         </div>
 
+        <!-- Status Bar with Clock -->
         <div class="status-bar">
             <div class="status-indicator">
                 <div id="status-dot" class="pulse-dot"></div>
                 <span id="status-text">INITIALIZING...</span>
             </div>
-            <div id="clock" style="font-size: 0.75rem; color: var(--text-dim);">00:00:00</div>
+            <div id="clock" style="font-size: 0.75rem; color: var(--text-dim); font-weight: 700;">00:00:00</div>
         </div>
 
-        <div class="status-bar" style="margin-top: -1rem; background: transparent; border: none; padding-top: 0;">
-            <div class="diag-container"
-                style="display: flex; gap: 1rem; font-size: 0.65rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.05em;">
-                <span>SDK: <span id="diag-sdk" style="color: var(--accent-primary);">--</span></span>
-                <span>HW: <span id="diag-hw" style="color: var(--status-green);">--</span></span>
+        <!-- Diagnostics Row -->
+        <div class="diag-row">
+            <span>SDK: <span id="diag-sdk" style="color: var(--accent-primary);">--</span></span>
+            <span>HW: <span id="diag-hw">--</span></span>
+        </div>
+
+        <!-- Stage Buttons (Sequential Workflow) -->
+        <div class="stage-selector">
+            <div id="stage-0" class="stage-btn" onclick="selectStage(0)">
+                <span>Right 4 Finger</span>
+                <span class="score-pill" id="score-0">0</span>
+            </div>
+            <div id="stage-1" class="stage-btn" onclick="selectStage(1)">
+                <span>Left 4 Finger</span>
+                <span class="score-pill" id="score-1">0</span>
+            </div>
+            <div id="stage-2" class="stage-btn" onclick="selectStage(2)">
+                <span>Both Thumbs</span>
+                <span class="score-pill" id="score-2">0</span>
             </div>
         </div>
 
         <div class="preview-area">
             <img id="preview-img" src="" alt="Biometric Preview">
-            <div id="placeholder" class="placeholder-text">
-                Ready for acquisition.<br>Click start to begin scan.
+            <div id="placeholder" style="color: var(--text-dim); text-align: center; font-size: 0.85rem;">
+                Workflow Active.<br>Select stage or click "Start Capture".
             </div>
-            <div id="quality" class="quality-badge">SCORE: 0</div>
             <div id="loading" class="loading-overlay">
                 <div class="spinner"></div>
-                <span style="font-size: 0.7rem; letter-spacing: 0.1em;">ACQUIRING...</span>
+                <span id="loading-text" style="font-size: 0.7rem; font-weight: 700; letter-spacing: 0.2em;">ACQUIRING...</span>
             </div>
         </div>
 
+        <div id="score-container" class="score-grid"></div>
+
         <div class="controls">
-            <label style="font-size: 0.7rem; color: var(--text-dim); margin-bottom: 0.25rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Capture Mode</label>
-            <select id="capture-mode" class="device-select" style="margin-bottom: 0.5rem;">
-                <option value="0">Right Thumb</option>
-                <option value="1">Left Thumb</option>
-                <option value="2">Left 4-Finger </option>
-                <option value="3">Right 4-Finger </option>
+            <select id="device-list" style="padding: 1rem; background: #000; border: 1px solid var(--border-color); color: white; border-radius: 12px; font-size: 0.85rem; grid-column: span 2; margin-bottom: 0.5rem;">
+                <option value="">SCANNING HARDWARE...</option>
             </select>
-
-            <label style="font-size: 0.7rem; color: var(--text-dim); margin-bottom: 0.25rem; display: block; text-transform: uppercase; letter-spacing: 0.05em;">Target Hardware</label>
-            <select id="device-list" class="device-select">
-                <option value="">SCANNING FOR HARDWARE...</option>
-            </select>
-            <button class="btn" id="capture-btn" disabled style="margin-top: 1rem;">Start Capture</button>
-        </div>
-
-        <div class="footer">
-            Windows Service ID: NEURO-01 | localhost:3000
+            
+            <button id="start-btn" class="main-btn">Start Capture</button>
+            
+            <button id="reset-system-btn-main" class="main-btn nav-btn" onclick="resetSystem()">Reset System</button>
+            <button id="retry-btn" class="main-btn" style="background: var(--status-yellow); color: #000; display: none;" onclick="retryFailedStage()">Retry Capture</button>
         </div>
     </div>
 
-    <!-- Error Toast -->
-    <div id="error-toast" class="toast">
-        <div class="toast-icon">✕</div>
-        <span id="error-message">Error Message</span>
+    <!-- Success Modal -->
+    <div id="success-modal" class="modal-overlay">
+        <div class="modal-content">
+            <h2 style="color: white; margin-bottom: 0.5rem; text-align: center;">Success</h2>
+            <p style="color: var(--text-dim); font-size: 0.8rem; text-align: center; margin-bottom: 1.5rem;">Consolidated Biometric JSON Generated</p>
+            <div id="json-output"></div>
+            <div style="display: flex; gap: 1rem;">
+                <button class="main-btn nav-btn" style="flex: 1;" onclick="copyJson()">Copy Data</button>
+                <button class="main-btn" style="flex: 1; background: var(--accent-primary); color: white;" onclick="closeModal()">Close</button>
+            </div>
+        </div>
     </div>
 
     <script>
-        const elements = {
+        const stages = [
+            { name: "Right 4 finger", mode: 3 },
+            { name: "Left 4 finger", mode: 2 },
+            { name: "Both Thumbs", mode: 4 }
+        ];
+
+        let currentStageIdx = -1;
+        let captureResults = [null, null, null];
+        let isSequenceRunning = false;
+
+        const el = {
             dot: document.getElementById('status-dot'),
             text: document.getElementById('status-text'),
-            btn: document.getElementById('capture-btn'),
-            resetBtn: document.getElementById('reset-btn'),
-            img: document.getElementById('preview-img'),
-            placeholder: document.getElementById('placeholder'),
-            quality: document.getElementById('quality'),
-            loading: document.getElementById('loading'),
-            clock: document.getElementById('clock'),
+            startBtn: document.getElementById('start-btn'),
+            retryBtn: document.getElementById('retry-btn'),
             deviceList: document.getElementById('device-list'),
-            modeSelect: document.getElementById('capture-mode'),
-            toast: document.getElementById('error-toast'),
-            toastMsg: document.getElementById('error-message')
+            previewImg: document.getElementById('preview-img'),
+            placeholder: document.getElementById('placeholder'),
+            loading: document.getElementById('loading'),
+            loadingText: document.getElementById('loading-text'),
+            scoreContainer: document.getElementById('score-container'),
+            errorScreen: document.getElementById('error-screen'),
+            errorMsg: document.getElementById('error-msg'),
+            modal: document.getElementById('success-modal'),
+            jsonOutput: document.getElementById('json-output'),
+            clock: document.getElementById('clock'),
+            diagSdk: document.getElementById('diag-sdk'),
+            diagHw: document.getElementById('diag-hw')
         };
-
-        function showError(msg) {
-            elements.toastMsg.innerText = msg;
-            elements.toast.classList.add('show');
-            setTimeout(() => {
-                elements.toast.classList.remove('show');
-            }, 5000);
-        }
-
-        // Reset Functionality with State Preservation
-        async function resetPage(clearInputs = true) {
-            const isCapturing = elements.text.innerText.includes('CAPTURING');
-            
-            if (isCapturing) {
-                console.log("[UI]: Active capture detected. Requesting graceful stop...");
-                elements.text.innerText = "STOPPING...";
-                
-                try {
-                    await fetch('/api/cancel', { method: 'POST' });
-                } catch (e) {
-                    console.error("Failed to signal cancel to backend", e);
-                }
-            }
-
-            // 1. Clear Capture Result Data (Always cleared)
-            elements.img.src = '';
-            elements.img.style.display = 'none';
-            elements.quality.style.display = 'none';
-            elements.quality.innerText = 'SCORE: 0';
-            elements.loading.style.display = 'none';
-            elements.placeholder.style.display = 'block';
-            elements.placeholder.innerText = 'Ready for acquisition.\nClick start to begin scan.';
-            elements.placeholder.style.color = 'var(--text-dim)';
-            
-            // 2. Reset Form Fields (Only if clearInputs is true)
-            if (clearInputs) {
-                elements.modeSelect.selectedIndex = 0;
-                console.log("[UI]: Form fields reset to defaults.");
-            }
-            
-            updateStatus();
-        }
-
-        async function loadDevices() {
-            try {
-                // Remember current selection before refresh
-                const selectedValue = elements.deviceList.value;
-
-                const res = await fetch('/api/devices');
-                const data = await res.json();
-
-                elements.deviceList.innerHTML = '';
-                if (data.devices && data.devices.length > 0) {
-                    data.devices.forEach(device => {
-                        const opt = document.createElement('option');
-                        opt.value = device;
-                        opt.innerText = device;
-                        elements.deviceList.appendChild(opt);
-                    });
-                    
-                    // Restore selection if it still exists in the new list
-                    if (selectedValue && data.devices.includes(selectedValue)) {
-                        elements.deviceList.value = selectedValue;
-                    }
-                    
-                    // Update button state based on new device list
-                    updateStatus();
-                } else {
-                    const opt = document.createElement('option');
-                    opt.value = "";
-                    opt.innerText = "NO DEVICES DETECTED";
-                    elements.deviceList.appendChild(opt);
-                }
-            } catch (e) {
-                console.error("Failed to load devices", e);
-            }
-        }
 
         async function updateStatus() {
             try {
                 const res = await fetch('/api/status');
                 const data = await res.json();
 
-                elements.text.innerText = data.status.toUpperCase();
-                elements.dot.className = 'pulse-dot ' + (data.isReady ? 'active' : 'busy');
+                el.text.innerText = data.status.toUpperCase();
+                el.dot.className = 'pulse-dot ' + (data.isReady ? 'active' : 'busy');
 
-                document.getElementById('diag-sdk').innerText = data.sdkVersion;
-                const hwStatus = document.getElementById('diag-hw');
-                hwStatus.innerText = data.hardwareDetected ? 'CONNECTED' : 'DISCONNECTED';
-                hwStatus.style.color = data.hardwareDetected ? 'var(--status-green)' : 'var(--status-red)';
+                el.diagSdk.innerText = data.sdkVersion;
+                el.diagHw.innerText = data.hardwareDetected ? 'CONNECTED' : 'DISCONNECTED';
+                el.diagHw.style.color = data.hardwareDetected ? 'var(--status-green)' : 'var(--status-red)';
 
-                // Enable button only if ready AND hardware is detected AND a device is selected
-                const hasSelectedDevice = elements.deviceList.value && elements.deviceList.value !== "";
-                elements.btn.disabled = !data.isReady || !data.hardwareDetected || !hasSelectedDevice;
-
+                const hasSelectedDevice = el.deviceList.value && el.deviceList.value !== "";
+                if (!isSequenceRunning && !el.startBtn.innerText.includes("Reset")) {
+                    el.startBtn.disabled = !data.isReady || !data.hardwareDetected || !hasSelectedDevice;
+                }
             } catch (e) {
-                elements.text.innerText = 'DISCONNECTED';
-                elements.dot.className = 'pulse-dot';
-                elements.btn.disabled = true;
+                el.text.innerText = 'DISCONNECTED';
+                el.dot.className = 'pulse-dot';
+                el.startBtn.disabled = true;
             }
         }
 
-        async function startCapture() {
-            // Only clear capture data, do NOT reset dropdowns
-            await resetPage(false);
+        async function loadDevices() {
+            try {
+                const res = await fetch('/api/devices');
+                const data = await res.json();
+                el.deviceList.innerHTML = '';
+                if (data.devices?.length > 0) {
+                    data.devices.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = opt.innerText = d;
+                        el.deviceList.appendChild(opt);
+                    });
+                } else {
+                    el.deviceList.innerHTML = '<option value="">NO HARDWARE DETECTED</option>';
+                }
+            } catch (e) { console.error(e); }
+        }
 
-            const mode = elements.modeSelect.value;
-            elements.loading.style.display = 'flex';
-            elements.btn.disabled = true;
+        function selectStage(idx) {
+            if (isSequenceRunning) return;
+            currentStageIdx = idx;
+            
+            stages.forEach((s, i) => document.getElementById(`stage-${i}`).classList.toggle('active', i === idx));
+
+            if (captureResults[idx]) {
+                displayResult(captureResults[idx]);
+            } else {
+                el.previewImg.style.display = 'none';
+                el.placeholder.style.display = 'block';
+                el.scoreContainer.innerHTML = '';
+            }
+        }
+
+        function displayResult(result) {
+            el.placeholder.style.display = 'none';
+            el.previewImg.src = 'data:image/png;base64,' + result.image;
+            el.previewImg.style.display = 'block';
+            
+            el.scoreContainer.innerHTML = '';
+            Object.entries(result.fingerScores).forEach(([finger, score]) => {
+                const card = document.createElement('div');
+                card.className = 'score-card';
+                card.innerHTML = `<div style="font-size: 0.6rem; color: var(--text-dim); text-transform: uppercase;">${finger}</div>
+                                 <div style="font-size: 1.4rem; font-weight: 800; color: ${score >= 70 ? 'var(--status-green)' : 'var(--status-red)'}">${score}</div>`;
+                el.scoreContainer.appendChild(card);
+            });
+        }
+
+        async function captureStage(idx) {
+            currentStageIdx = idx;
+            isSequenceRunning = true;
+            
+            selectStage(idx);
+            el.loading.style.display = 'flex';
+            el.loadingText.innerText = `ACQUIRING ${stages[idx].name.toUpperCase()}...`;
+            el.retryBtn.style.display = 'none';
+            el.startBtn.disabled = true;
 
             try {
-                const res = await fetch('/api/capture', { 
+                const res = await fetch('/api/capture', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        mode: parseInt(mode),
-                        deviceName: elements.deviceList.value 
-                    })
+                    body: JSON.stringify({ mode: stages[idx].mode, deviceName: el.deviceList.value })
                 });
                 const data = await res.json();
 
                 if (data.success) {
-                    elements.img.src = 'data:image/png;base64,' + data.image;
-                    elements.img.style.display = 'block';
-                    elements.placeholder.style.display = 'none';
-                    elements.quality.innerText = 'SCORE: ' + data.quality;
-                    elements.quality.style.display = 'block';
+                    captureResults[idx] = data;
+                    document.getElementById(`stage-${idx}`).classList.add('completed');
+                    document.getElementById(`score-${idx}`).innerText = data.quality;
+                    displayResult(data);
+
+                    if (idx < 2) {
+                        setTimeout(() => captureStage(idx + 1), 1500);
+                    } else {
+                        finishAll();
+                    }
                 } else {
-                    showError(data.error || 'Capture Failed');
-                    elements.placeholder.innerText = data.error;
-                    elements.placeholder.style.color = 'var(--status-red)';
+                    showError(data.error || "Capture Failed");
                 }
             } catch (e) {
-                showError('Connection Error: Service might be offline.');
+                showError("System Communication Failure");
             } finally {
-                elements.loading.style.display = 'none';
-                updateStatus();
+                el.loading.style.display = 'none';
             }
         }
 
-        elements.btn.addEventListener('click', startCapture);
-        elements.resetBtn.addEventListener('click', () => resetPage(true));
-        
-        // Immediate UI feedback on device selection
-        elements.deviceList.addEventListener('change', updateStatus);
+        function showError(msg) {
+            isSequenceRunning = false;
+            el.errorMsg.innerText = msg;
+            el.errorScreen.style.display = 'flex';
+            el.retryBtn.style.display = 'block';
+            el.startBtn.disabled = false;
+        }
 
-        // Clock Update
-        setInterval(() => {
-            elements.clock.innerText = new Date().toLocaleTimeString();
-        }, 1000);
+        function hideError() { el.errorScreen.style.display = 'none'; }
+        function retryFailedStage() { captureStage(currentStageIdx); }
 
-        // Polling
+        function finishAll() {
+            isSequenceRunning = false;
+            el.startBtn.disabled = true;
+            el.startBtn.innerText = "Capture Complete (Click to Reset)";
+            
+            const final = stages.map((s, i) => ({
+                stage: s.name,
+                scores: captureResults[i].fingerScores,
+                quality: captureResults[i].quality
+            }));
+
+            el.jsonOutput.innerText = JSON.stringify(final, null, 2);
+            el.modal.style.display = 'flex';
+        }
+
+        async function resetSystem() {
+            // Signal cancellation to SDK
+            try { await fetch('/api/cancel', { method: 'POST' }); } catch (e) {}
+            
+            captureResults = [null, null, null];
+            currentStageIdx = -1;
+            isSequenceRunning = false;
+            
+            stages.forEach((s, i) => {
+                const btn = document.getElementById(`stage-${i}`);
+                btn.className = 'stage-btn';
+                document.getElementById(`score-${i}`).innerText = '0';
+            });
+
+            el.startBtn.disabled = false;
+            el.startBtn.innerText = "Start Capture";
+            el.previewImg.style.display = 'none';
+            el.placeholder.style.display = 'block';
+            el.scoreContainer.innerHTML = '';
+            el.retryBtn.style.display = 'none';
+            hideError();
+            updateStatus();
+        }
+
+        el.startBtn.addEventListener('click', () => {
+            if (el.startBtn.innerText.includes("Reset")) {
+                resetSystem();
+            } else {
+                captureStage(0);
+            }
+        });
+
+        function closeModal() { el.modal.style.display = 'none'; }
+        function copyJson() {
+            navigator.clipboard.writeText(el.jsonOutput.innerText);
+            alert("JSON data copied to clipboard.");
+        }
+
+        setInterval(() => el.clock.innerText = new Date().toLocaleTimeString(), 1000);
         setInterval(updateStatus, 2000);
-        setInterval(loadDevices, 5000); // Check for hardware changes every 5s
-        updateStatus();
+        setInterval(loadDevices, 10000);
+        
         loadDevices();
+        updateStatus();
     </script>
 </body>
 
