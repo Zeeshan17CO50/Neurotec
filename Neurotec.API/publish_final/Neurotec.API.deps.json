@@ -1422,6 +1422,7 @@
       },
       "Neurotec.Infrastructure/1.0.0": {
         "dependencies": {
+          "Neurotec.Application": "1.0.0",
           "Neurotec.Domain": "1.0.0",
           "System.Drawing.Common": "10.0.7"
         },
@@ -1429,6 +1430,14 @@
           "Neurotec.Infrastructure.dll": {
             "assemblyVersion": "1.0.0.0",
             "fileVersion": "1.0.0.0"
+          }
+        }
+      },
+      "Neurotec.Biometrics/2025.2.0.0": {
+        "runtime": {
+          "Neurotec.Biometrics.dll": {
+            "assemblyVersion": "2025.2.0.0",
+            "fileVersion": "2025.2.0.0"
           }
         }
       },
@@ -1448,17 +1457,9 @@
           }
         }
       },
-      "Neurotec.Biometrics/2025.2.0.0": {
+      "Neurotec/2025.2.0.0": {
         "runtime": {
-          "Neurotec.Biometrics.dll": {
-            "assemblyVersion": "2025.2.0.0",
-            "fileVersion": "2025.2.0.0"
-          }
-        }
-      },
-      "Neurotec.Media/2025.2.0.0": {
-        "runtime": {
-          "Neurotec.Media.dll": {
+          "Neurotec.dll": {
             "assemblyVersion": "2025.2.0.0",
             "fileVersion": "2025.2.0.0"
           }
@@ -1472,9 +1473,9 @@
           }
         }
       },
-      "Neurotec/2025.2.0.0": {
+      "Neurotec.Media/2025.2.0.0": {
         "runtime": {
-          "Neurotec.dll": {
+          "Neurotec.Media.dll": {
             "assemblyVersion": "2025.2.0.0",
             "fileVersion": "2025.2.0.0"
           }
@@ -1555,6 +1556,11 @@
       "serviceable": false,
       "sha512": ""
     },
+    "Neurotec.Biometrics/2025.2.0.0": {
+      "type": "reference",
+      "serviceable": false,
+      "sha512": ""
+    },
     "Neurotec.Biometrics.Client/2025.2.0.0": {
       "type": "reference",
       "serviceable": false,
@@ -1565,12 +1571,7 @@
       "serviceable": false,
       "sha512": ""
     },
-    "Neurotec.Biometrics/2025.2.0.0": {
-      "type": "reference",
-      "serviceable": false,
-      "sha512": ""
-    },
-    "Neurotec.Media/2025.2.0.0": {
+    "Neurotec/2025.2.0.0": {
       "type": "reference",
       "serviceable": false,
       "sha512": ""
@@ -1580,7 +1581,7 @@
       "serviceable": false,
       "sha512": ""
     },
-    "Neurotec/2025.2.0.0": {
+    "Neurotec.Media/2025.2.0.0": {
       "type": "reference",
       "serviceable": false,
       "sha512": ""

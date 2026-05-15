@@ -22,6 +22,7 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
     private readonly PreviewState _previewState;
     private ScannerStatus _status = ScannerStatus.Ready;
     private bool _isDisposed;
+    private bool _isLicensed;
 
     public event Action<ScannerStatus>? OnStatusChanged;
 
@@ -46,6 +47,9 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
             _previewState.LatestFrame = base64;
         };
 
+        // Subscribe to real-time hardware changes
+        _neurotecService.OnDevicesChanged += HandleDevicesChanged;
+
         _logger.LogInformation("Initializing Neurotec Scanner Service at: {Path}", AppContext.BaseDirectory);
         
         InitializeSdk();
@@ -63,32 +67,63 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
             
             _logger.LogDebug("Requesting Neurotec licenses: {Components} from {Server}", components, server);
             
-            bool obtained = _neurotecService.ObtainLicenses(server, components);
+            _isLicensed = _neurotecService.ObtainLicenses(server, components);
             
-            if (!obtained)
+            if (!_isLicensed)
             {
-                _logger.LogWarning("Failed to obtain all requested Neurotec licenses. Some hardware features may be unavailable.");
+                _logger.LogError("CRITICAL: Failed to obtain required Neurotec licenses ({Components}). Hardware will be inaccessible.", components);
+                _status = ScannerStatus.Error;
+            }
+            else
+            {
+                _logger.LogInformation("Neurotec licenses obtained successfully.");
             }
         }
         catch (Exception ex) when (ex.Message.Contains("already initialized"))
         {
             _logger.LogInformation("Neurotec SDK components already initialized in this process.");
+            _isLicensed = true; 
         }
         catch (Exception ex)
         {
             _logger.LogCritical(ex, "Fatal error during Neurotec SDK initialization.");
             _status = ScannerStatus.Error;
+            _isLicensed = false;
         }
+    }
+
+    private void HandleDevicesChanged()
+    {
+        _logger.LogInformation("Real-time hardware configuration change detected. Updating status...");
+        
+        // If we are currently capturing and the device is removed, we should signal a stop
+        if (_status == ScannerStatus.Capturing)
+        {
+            var devices = _neurotecService.GetDeviceNames();
+            if (!devices.Any())
+            {
+                _logger.LogWarning("Active device disconnected during capture! Signaling cancellation.");
+                _neurotecService.Cancel();
+            }
+        }
+
+        // Trigger a status change event to notify subscribers (like the API/UI layer)
+        OnStatusChanged?.Invoke(GetStatus());
     }
 
     public ScannerStatus GetStatus()
     {
-        // Self-healing: If we were in an error state but we now see devices, we are ready.
+        if (!_isLicensed) return ScannerStatus.Error;
+
+        // Dynamic status check: If we think we are ready but no hardware is present, 
+        // we are technically in a "waiting" or "ready" state, but the API layer 
+        // uses GetDevices() to show the "Disconnected" UI.
+        
+        // However, if we were in an Error state (licensing) and now have devices, we self-heal.
         if (_status == ScannerStatus.Error)
         {
             try
             {
-                // Simple check: do we have any devices?
                 if (_neurotecService.GetDeviceNames().Any())
                 {
                     _logger.LogInformation("Self-healing: Devices detected, transitioning from Error to Ready.");
@@ -131,7 +166,6 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
         using var subject = CreateSubjectForMode(mode);
         using var cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         
-        // Use timeout from configuration (defaults to 40s if not set)
         var timeoutSeconds = _settings.NeurotecSdk.CaptureSettings?.TimeoutMs / 1000 ?? 40;
         cts.CancelAfter(TimeSpan.FromSeconds(timeoutSeconds));
 
@@ -174,7 +208,6 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
                 return BiometricResult.Fail("Operation Canceled");
             }
 
-            // Return the raw SDK status name (e.g., "TooManyObjects", "PositionUnknown")
             return BiometricResult.Fail(status.ToString());
         }
         catch (OperationCanceledException)
@@ -287,6 +320,9 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
     public void Dispose()
     {
         if (_isDisposed) return;
+        
+        // Unsubscribe from events to prevent memory leaks
+        _neurotecService.OnDevicesChanged -= HandleDevicesChanged;
         
         _neurotecService?.Dispose();
         _isDisposed = true;

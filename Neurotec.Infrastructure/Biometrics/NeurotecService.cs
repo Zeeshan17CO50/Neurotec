@@ -7,6 +7,7 @@ using Neurotec.Application.Models;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
+using System.Collections.Specialized;
 
 namespace Neurotec.Infrastructure.Biometrics;
 
@@ -14,12 +15,19 @@ public class NeurotecService : INeurotecService
 {
     private readonly NBiometricClient _client;
     public event Action<string>? OnPreviewFrameReceived;
+    public event Action? OnDevicesChanged;
 
     public NeurotecService()
     {
         _client = new NBiometricClient { UseDeviceManager = true };
         _client.DeviceManager.DeviceTypes = NDeviceType.FingerScanner;
         
+        // Ensure DeviceManager is initialized to start monitoring hardware
+        _client.DeviceManager.Initialize();
+
+        // Real-time device detection via SDK CollectionChanged event
+        _client.DeviceManager.Devices.CollectionChanged += OnDevicesCollectionChanged;
+
         // Hook into the client's property changes to catch the live preview
         _client.PropertyChanged += (s, e) =>
         {
@@ -48,6 +56,12 @@ public class NeurotecService : INeurotecService
         };
     }
 
+    private void OnDevicesCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
+    {
+        // When a device is added or removed, notify subscribers immediately
+        OnDevicesChanged?.Invoke();
+    }
+
     public bool ObtainLicenses(string server, string components)
     {
         try 
@@ -64,13 +78,21 @@ public class NeurotecService : INeurotecService
 
     public IEnumerable<string> GetDeviceNames()
     {
-        _client.DeviceManager.Initialize();
-        return _client.DeviceManager.Devices.Select(d => d.DisplayName);
+        // Re-initialize/Refresh is not strictly needed if we are event-driven, 
+        // but it ensures the list is up-to-date for the current call.
+        return _client.DeviceManager.Devices
+            .Where(d => d.IsAvailable)
+            .Select(d => d.DisplayName);
     }
 
     public bool TrySetScanner(string? deviceName)
     {
-        _client.DeviceManager.Initialize();
+        if (deviceName == null)
+        {
+            _client.FingerScanner = null;
+            return true;
+        }
+
         var scanners = _client.DeviceManager.Devices.OfType<NFingerScanner>().ToList();
         
         if (!scanners.Any()) return false;
@@ -139,7 +161,6 @@ public class NeurotecService : INeurotecService
                     groupQuality = attr.Quality;
                 }
                 
-                // If this is the main image and we haven't set it yet, set it
                 if (string.IsNullOrEmpty(data.Base64Image) && finger.Image != null)
                 {
                     using var stream = new MemoryStream();
@@ -184,9 +205,6 @@ public class NeurotecService : INeurotecService
             }
         }
 
-        // PRECEDENCE RULE:
-        // 1. Use the SDK's calculated Group Quality if available (e.g., the 82 in your screenshot)
-        // 2. Fall back to manual average of individual fingers if no group score exists
         if (groupQuality > 0)
         {
             data.QualityScore = groupQuality;
@@ -201,6 +219,9 @@ public class NeurotecService : INeurotecService
 
     public void Dispose()
     {
+        // Properly unsubscribe and dispose to prevent memory leaks
+        _client.DeviceManager.Devices.CollectionChanged -= OnDevicesCollectionChanged;
         _client?.Dispose();
+        GC.SuppressFinalize(this);
     }
 }
