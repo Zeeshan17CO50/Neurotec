@@ -7,10 +7,13 @@
 The solution is designed as a scalable, enterprise-ready Windows Service application that provides:
 
 * **Professional Sequential Capture Workflow**: Specialized 4-4-2 enrollment process.
-* **Per-Finger Quality Assessment**: Granular scoring for individual fingers within slap captures.
+* **Real-time Live Biometric Preview**: High-frequency frame streaming from native hardware to the web UI.
+* **Instructional UI Guidance**: Dedicated instruction bar for clear user interaction without view obstruction.
+* **Automated Finger Segmentation**: Backend-driven extraction of individual fingers from slap captures.
+* **10-Finger Visual Summary**: Consolidated gallery view with color-coded quality assessment.
+* **Per-Finger Quality Assessment**: Granular scoring and segmented image extraction for all 10 fingers.
 * **Automatic Progression**: Smart stage advancement based on configurable quality thresholds.
-* **Real-time Biometric Acquisition**: Powered by optimized native SDK plugins.
-* **Modern Dashboard UI**: A state-of-the-art "Glassmorphism" interface with full-screen error isolation.
+* **Modern Dashboard UI**: A state-of-the-art interface with optimized high-contrast biometric rendering.
 * **Graceful Lifecycle Management**: REST API-based operations including hardware-safe cancellation and system resets.
 
 The application follows **Clean Architecture principles** and **SOLID patterns** to ensure production-grade reliability and extreme maintainability.
@@ -72,12 +75,13 @@ Neurotec.API
 Neurotec.Application
 │
 ├── Application Workflows (Enrollment Orchestration)
+├── Preview State Management (Live Frame Singleton)
 ├── Business Use Cases
 └── Service Orchestration
 
 Neurotec.Domain
 │
-├── Core Entities (BiometricData with FingerScores)
+├── Core Entities (BiometricData with Nested FingerDetail)
 ├── Interfaces (IBiometricScanner)
 ├── Enums (TwoThumbs support)
 └── Domain Models
@@ -108,18 +112,26 @@ The system implements a professional enrollment sequence that ensures all requir
 * **Stage 2**: Left 4 Fingers (Slap)
 * **Stage 3**: Both Thumbs (4-4-2 Workflow)
 
-### Per-Finger Extraction
-During slap captures (4 fingers), the infrastructure layer automatically segments the image and extracts individual quality scores (0-100) for:
+### Instructional Workflow
+A dedicated **Instruction Bar** positioned above the viewport provides clear, real-time guidance (e.g., "PLACE RIGHT 4 FINGER...") without dimming or obstructing the live biometric feed.
+
+### High-Contrast Visual Clarity
+The capture viewport is optimized for biometric clarity, removing dark overlays during active acquisition to ensure a sharp, high-contrast live stream of the fingerprint ridges.
+
+### Per-Finger Extraction & Gallery
+During slap captures, the infrastructure layer automatically segments the image and extracts individual images and quality scores for:
 *   `Index`, `Middle`, `Ring`, `Little`
 *   `Left Thumb`, `Right Thumb` (in Two-Thumb mode)
 
-### Supported Functionalities
+All 10 fingers are then presented in a **Consolidated Visual Gallery** with color-coded quality badges (Green >= 70, Red < 70).
 
-* Finger scanner auto-detection
-* Plugin-based scanner architecture
-* Real-time fingerprint capture
-* Base64 image generation
-* Quality score evaluation
+### Supported Functionalities
+* Finger scanner auto-detection & Plugin-based architecture
+* **Live Biometric Preview** (Web-native frame streaming)
+* **10-Finger Visual Summary** grid
+* **Automated Segmentation** of slaps and thumbs
+* Base64 individual finger image generation
+* Quality score evaluation per finger
 
 ---
 
@@ -150,10 +162,22 @@ Returns a list of connected biometric devices with automatic display-name mappin
 
 ### Fingerprint Capture
 `POST /api/capture`
-Initiates hardware scan. Supports mode mapping:
+Initiates hardware scan. Returns nested finger data:
 *   `3`: Right 4-Finger
 *   `2`: Left 4-Finger
 *   `4`: Two-Thumbs (Plain Thumbs)
+  
+```json
+{
+  "fingers": {
+    "right index": { "score": 85, "image": "base64..." }
+  }
+}
+```
+
+### Live Preview Stream
+`GET /api/preview`
+Returns the latest raw biometric frame from the active scanner for real-time UI updates.
 
 ### Graceful Cancel
 `POST /api/cancel`
@@ -272,10 +296,11 @@ No manual service configuration is required.
 ## Dashboard Verification
 Open: `http://localhost:3000/home`
 *   **Workflow steps**: Top buttons indicate capture progress (R4 -> L4 -> Thumbs).
+*   **Instruction Bar**: Displays active guidance above the live viewport.
+*   **Live Preview**: Fingerprints are visible in real-time as they touch the scanner.
 *   **Ready State**: Green dot indicates hardware is connected and SDK is active.
 *   **Reset System**: Located in the control panel to clear enrollment data or cancel a scan.
-*   **Capturing State**: Orange pulse indicates hardware is active.
-*   **Completion**: "Capture Complete (Click to Reset)" button appears after Stage 3.
+*   **Completion**: A 10-finger Visual Gallery appears with quality scores after Stage 3.
 
 ## API Verification
 Open: `http://localhost:3000/api/status`
