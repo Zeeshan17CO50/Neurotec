@@ -3,6 +3,7 @@ using Microsoft.Extensions.Hosting.WindowsServices;
 using Neurotec.Domain.Configuration;
 using Neurotec.Domain.Enums;
 using Neurotec.Application.Interfaces;
+using Neurotec.Application.Models;
 using Neurotec.Infrastructure.Biometrics;
 
 [assembly: SupportedOSPlatform("windows")]
@@ -44,6 +45,7 @@ builder.WebHost.UseUrls($"http://*:{settings.ServiceSettings.HttpPort}");
 // Add services to the container.
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddOpenApi();
+builder.Services.AddSingleton<PreviewState>();
 
 try
 {
@@ -134,7 +136,7 @@ try
             success = true,
             image = result.Data?.Base64Image,
             quality = result.Data?.QualityScore,
-            fingerScores = result.Data?.FingerScores,
+            fingers = result.Data?.Fingers,
             timestamp = result.Data?.CapturedAt
         });
     });
@@ -143,6 +145,11 @@ try
     {
         scanner.StopCapture();
         return Results.Ok(new { success = true, message = "Capture stop requested" });
+    });
+
+    app.MapGet("/api/preview", (PreviewState state) => 
+    {
+        return Results.Ok(new { image = state.LatestFrame });
     });
 
     app.Run();

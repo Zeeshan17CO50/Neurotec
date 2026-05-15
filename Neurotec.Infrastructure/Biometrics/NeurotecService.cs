@@ -3,19 +3,49 @@ using Neurotec.Biometrics.Client;
 using Neurotec.Devices;
 using Neurotec.Application.Interfaces;
 using Neurotec.Application.DTOs;
+using Neurotec.Application.Models;
 using System.Drawing;
 using System.Drawing.Imaging;
+using System.IO;
 
 namespace Neurotec.Infrastructure.Biometrics;
 
 public class NeurotecService : INeurotecService
 {
     private readonly NBiometricClient _client;
+    public event Action<string>? OnPreviewFrameReceived;
 
     public NeurotecService()
     {
         _client = new NBiometricClient { UseDeviceManager = true };
         _client.DeviceManager.DeviceTypes = NDeviceType.FingerScanner;
+        
+        // Hook into the client's property changes to catch the live preview
+        _client.PropertyChanged += (s, e) =>
+        {
+            if (e.PropertyName == "CurrentBiometric")
+            {
+                var finger = _client.CurrentBiometric as NFinger;
+                if (finger != null)
+                {
+                    // Subscribe to the finger's image change
+                    finger.PropertyChanged += (fs, fe) =>
+                    {
+                        if (fe.PropertyName == "Image" && finger.Image != null)
+                        {
+                            try
+                            {
+                                using var stream = new MemoryStream();
+                                finger.Image.ToBitmap().Save(stream, ImageFormat.Png);
+                                var base64 = Convert.ToBase64String(stream.ToArray());
+                                OnPreviewFrameReceived?.Invoke(base64);
+                            }
+                            catch { /* Ignore framing errors during capture */ }
+                        }
+                    };
+                }
+            }
+        };
     }
 
     public bool ObtainLicenses(string server, string components)
@@ -96,40 +126,58 @@ public class NeurotecService : INeurotecService
 
         foreach (var finger in subject.Fingers)
         {
-            string groupName = finger.Position.ToString().ToLower().Replace("plain", "").Trim();
+            string posName = finger.Position.ToString().ToLower().Replace("plain", "").Trim();
             
-            // Check if this is a slap group (4 fingers or 2 thumbs)
-            if (groupName.Contains("fourfingers") || groupName.Contains("thumbs"))
+            // 1. Identify Slaps (Groups)
+            bool isSlap = posName.Contains("fourfingers") || posName.Contains("thumbs");
+            
+            if (isSlap)
             {
-                // The SDK provides a quality for the entire slap image
-                groupQuality = finger.Objects.FirstOrDefault()?.Quality ?? 0;
-                
-                if (!data.FingerScores.ContainsKey(groupName))
+                var attr = finger.Objects.FirstOrDefault();
+                if (attr != null && attr.Quality > 0)
                 {
-                    data.FingerScores[groupName] = groupQuality;
+                    groupQuality = attr.Quality;
+                }
+                
+                // If this is the main image and we haven't set it yet, set it
+                if (string.IsNullOrEmpty(data.Base64Image) && finger.Image != null)
+                {
+                    using var stream = new MemoryStream();
+                    finger.Image.ToBitmap().Save(stream, ImageFormat.Png);
+                    data.Base64Image = Convert.ToBase64String(stream.ToArray());
                 }
             }
 
-            foreach (var obj in finger.Objects)
+            // 2. Identify individual/segmented fingers
+            string handPrefix = posName.Contains("right") ? "right " : "left ";
+            string displayName = "";
+
+            if (posName.Contains("index")) displayName = handPrefix + "index";
+            else if (posName.Contains("middle")) displayName = handPrefix + "middle";
+            else if (posName.Contains("ring")) displayName = handPrefix + "ring";
+            else if (posName.Contains("little")) displayName = handPrefix + "little";
+            else if (posName.Contains("thumb") && !posName.Contains("thumbs")) 
             {
-                string posName = obj.Position.ToString().ToLower().Replace("plain", "").Trim();
-                int quality = obj.Quality;
+                displayName = handPrefix + "thumb";
+            }
 
-                string displayName = posName;
-                if (posName.Contains("index")) displayName = "index";
-                else if (posName.Contains("middle")) displayName = "middle";
-                else if (posName.Contains("ring")) displayName = "ring";
-                else if (posName.Contains("little")) displayName = "little";
-                else if (posName.Contains("thumb")) 
-                {
-                    if (posName.Contains("right")) displayName = "right thumb";
-                    else if (posName.Contains("left")) displayName = "left thumb";
-                    else continue; 
-                }
+            if (!string.IsNullOrEmpty(displayName))
+            {
+                var attr = finger.Objects.FirstOrDefault();
+                int quality = attr?.Quality ?? 0;
 
-                if (!data.FingerScores.ContainsKey(displayName))
+                if (!data.Fingers.ContainsKey(displayName))
                 {
-                    data.FingerScores[displayName] = quality;
+                    var detail = new FingerDetail { Score = quality };
+                    
+                    if (finger.Image != null)
+                    {
+                        using var imgStream = new MemoryStream();
+                        finger.Image.ToBitmap().Save(imgStream, ImageFormat.Png);
+                        detail.Image = Convert.ToBase64String(imgStream.ToArray());
+                    }
+
+                    data.Fingers[displayName] = detail;
                     totalIndividualQuality += quality;
                     fingerCount++;
                 }

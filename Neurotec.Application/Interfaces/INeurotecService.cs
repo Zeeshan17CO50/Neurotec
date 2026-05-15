@@ -15,4 +15,5 @@ public interface INeurotecService : IDisposable
     void Cancel();
     void SetQualityThreshold(byte threshold);
     BiometricData? ExtractData(NSubject subject);
+    event Action<string>? OnPreviewFrameReceived;
 }

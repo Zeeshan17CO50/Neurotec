@@ -10,6 +10,7 @@ using Neurotec.Infrastructure.Biometrics;
 using FluentAssertions;
 using Xunit;
 using Neurotec.Devices;
+using Neurotec.Application.Models;
 
 namespace Neurotec.Tests.Biometrics;
 
@@ -18,6 +19,7 @@ public class NeurotecScannerTests
     private readonly Mock<IOptions<NeurotecSettings>> _mockOptions;
     private readonly Mock<ILogger<NeurotecScanner>> _mockLogger;
     private readonly Mock<INeurotecService> _mockNeurotecService;
+    private readonly PreviewState _previewState;
     private readonly NeurotecSettings _settings;
 
     public NeurotecScannerTests()
@@ -25,6 +27,7 @@ public class NeurotecScannerTests
         _mockOptions = new Mock<IOptions<NeurotecSettings>>();
         _mockLogger = new Mock<ILogger<NeurotecScanner>>();
         _mockNeurotecService = new Mock<INeurotecService>();
+        _previewState = new PreviewState();
 
         _settings = new NeurotecSettings
         {
@@ -52,14 +55,14 @@ public class NeurotecScannerTests
     [Fact]
     public void Constructor_WithNullSettings_ShouldThrowArgumentNullException()
     {
-        Action act = () => new NeurotecScanner(null!, _mockLogger.Object, _mockNeurotecService.Object);
+        Action act = () => new NeurotecScanner(null!, _mockLogger.Object, _mockNeurotecService.Object, _previewState);
         act.Should().Throw<ArgumentNullException>();
     }
 
     [Fact]
     public void Constructor_WithNullLogger_ShouldThrowArgumentNullException()
     {
-        Action act = () => new NeurotecScanner(_mockOptions.Object, null!, _mockNeurotecService.Object);
+        Action act = () => new NeurotecScanner(_mockOptions.Object, null!, _mockNeurotecService.Object, _previewState);
         act.Should().Throw<ArgumentNullException>();
     }
 
@@ -170,7 +173,7 @@ public class NeurotecScannerTests
 
     private NeurotecScanner CreateScanner()
     {
-        return new NeurotecScanner(_mockOptions.Object, _mockLogger.Object, _mockNeurotecService.Object);
+        return new NeurotecScanner(_mockOptions.Object, _mockLogger.Object, _mockNeurotecService.Object, _previewState);
     }
 
     #endregion

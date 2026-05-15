@@ -19,6 +19,7 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
     private readonly INeurotecService _neurotecService;
     private readonly NeurotecSettings _settings;
     private readonly ILogger<NeurotecScanner> _logger;
+    private readonly PreviewState _previewState;
     private ScannerStatus _status = ScannerStatus.Ready;
     private bool _isDisposed;
 
@@ -27,15 +28,23 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
     public NeurotecScanner(
         IOptions<NeurotecSettings> settings, 
         ILogger<NeurotecScanner> logger,
-        INeurotecService neurotecService)
+        INeurotecService neurotecService,
+        PreviewState previewState)
     {
         if (settings == null) throw new ArgumentNullException(nameof(settings));
         if (logger == null) throw new ArgumentNullException(nameof(logger));
         if (neurotecService == null) throw new ArgumentNullException(nameof(neurotecService));
+        if (previewState == null) throw new ArgumentNullException(nameof(previewState));
 
         _settings = settings.Value ?? throw new ArgumentNullException(nameof(settings));
         _logger = logger;
         _neurotecService = neurotecService;
+        _previewState = previewState;
+
+        _neurotecService.OnPreviewFrameReceived += (base64) => 
+        {
+            _previewState.LatestFrame = base64;
+        };
 
         _logger.LogInformation("Initializing Neurotec Scanner Service at: {Path}", AppContext.BaseDirectory);
         
@@ -185,6 +194,7 @@ public sealed class NeurotecScanner : IBiometricScanner, IDisposable
         }
         finally
         {
+            _previewState.LatestFrame = null;
             _neurotecService.TrySetScanner(null);
             UpdateStatus(ScannerStatus.Ready);
         }
